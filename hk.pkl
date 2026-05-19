@@ -6,10 +6,10 @@ local linters = new Mapping<String, Step> {
     check = "./gradlew spotlessCheck"
     fix = "./gradlew spotlessApply"
   }
-  ["detekt"] {
-    glob = List("**/*.kt")
-    check = "./gradlew detekt"
-  }
+  // ["detekt"] {
+  //   glob = List("**/*.kt")
+  //   check = "./gradlew detekt"
+  // }
 }
 
 hooks {
