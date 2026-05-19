@@ -55,7 +55,7 @@ class QualityConventionPlugin : Plugin<Project> {
                 dependsOn(
                     tasks.named("allTests"),
                     tasks.named("koverVerify"),
-                    tasks.named("ktlintCheck"),
+                    tasks.named("spotlessCheck"),
                     tasks.named("detekt"),
                     tasks.named("dokkaGeneratePublicationHtml"),
                 )
