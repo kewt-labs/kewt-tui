@@ -13,30 +13,20 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
+package dev.kewt.terminal
+
+import dev.kewt.platform.Size
+
+public interface Terminal {
+    public fun enterRawMode()
+    public fun exitRawMode()
+    public fun size(): Size
+    public fun read(): Event?
+    public fun write(text: String)
+    public fun flush()
+    public fun moveCursor(x: Int, y: Int)
+    public fun hideCursor()
+    public fun showCursor()
+    public fun clear()
+    public fun clearLine()
 }
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-    }
-
-}
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-rootProject.name = "kewt"
-
-include(
-    ":kewt-platform",
-    ":kewt-terminal"
-)

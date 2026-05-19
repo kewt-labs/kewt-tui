@@ -13,30 +13,25 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
+package dev.kewt.terminal
+
+public enum class ColorMode {
+    NoColor,
+    Basic,
+    Extended,
+    TrueColor,
+    ;
+
+    public companion object {
+        public fun detect(): ColorMode {
+            val colorTerm = getEnv("COLORTERM") ?: ""
+            if (colorTerm == "truecolor" || colorTerm == "24bit") return TrueColor
+            val term = getEnv("TERM") ?: ""
+            if (term == "dumb") return NoColor
+            if ("256color" in term) return Extended
+            return TrueColor
+        }
     }
 }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-    }
-
-}
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-rootProject.name = "kewt"
-
-include(
-    ":kewt-platform",
-    ":kewt-terminal"
-)
+internal expect fun getEnv(name: String): String?

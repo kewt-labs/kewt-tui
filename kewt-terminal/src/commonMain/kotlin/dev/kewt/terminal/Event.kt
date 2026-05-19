@@ -13,30 +13,17 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
+package dev.kewt.terminal
+
+public sealed class Event
+
+public data class KeyEvent(
+    val key: Key,
+    val modifiers: Set<KeyModifier> = emptySet(),
+) : Event()
+
+public enum class KeyModifier {
+    Shift,
+    Ctrl,
+    Alt,
 }
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-    }
-
-}
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-rootProject.name = "kewt"
-
-include(
-    ":kewt-platform",
-    ":kewt-terminal"
-)
