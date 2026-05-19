@@ -22,20 +22,38 @@ import platform.posix.SIGTERM
 import platform.posix.SIGWINCH
 import platform.posix.SIG_DFL
 import platform.posix.signal
+import kotlin.concurrent.AtomicReference
 
-private val handlers = mutableMapOf<Int, () -> Unit>()
+private val handlers = AtomicReference<Map<Int, () -> Unit>>(emptyMap())
 
 @OptIn(ExperimentalForeignApi::class)
 public actual object SignalHandler {
     public actual fun register(signal: PosixSignal, handler: () -> Unit) {
         val code = signal.toCode()
-        handlers[code] = handler
-        signal(code, staticCFunction { sig -> handlers[sig]?.invoke() })
+
+        while (true) {
+            val old = handlers.value
+            val new = old + (code to handler)
+            if (handlers.compareAndSet(old, new)) break
+        }
+
+        signal(
+            code,
+            staticCFunction { sig ->
+                handlers.value[sig]?.invoke()
+            },
+        )
     }
 
     public actual fun unregister(signal: PosixSignal) {
         val code = signal.toCode()
-        handlers.remove(code)
+
+        while (true) {
+            val old = handlers.value
+            val new = old - code
+            if (handlers.compareAndSet(old, new)) break
+        }
+
         signal(code, SIG_DFL)
     }
 }

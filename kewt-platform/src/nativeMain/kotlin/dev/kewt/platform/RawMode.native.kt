@@ -16,10 +16,13 @@
 package dev.kewt.platform
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.sizeOf
+import kotlinx.cinterop.usePinned
 import platform.posix.F_GETFL
 import platform.posix.F_SETFL
 import platform.posix.O_NONBLOCK
@@ -27,38 +30,53 @@ import platform.posix.STDIN_FILENO
 import platform.posix.TCSAFLUSH
 import platform.posix.cfmakeraw
 import platform.posix.fcntl
+import platform.posix.memcpy
 import platform.posix.tcgetattr
 import platform.posix.tcsetattr
 import platform.posix.termios
 
 @OptIn(ExperimentalForeignApi::class)
 public actual object RawMode {
-    private val original = nativeHeap.alloc<termios>()
+    private val original = ByteArray(sizeOf<termios>().toInt())
     private var saved = false
     private var originalFlags = 0
 
     public actual fun enter() {
         memScoped {
-            tcgetattr(STDIN_FILENO, original.ptr)
-            saved = true
+            val term = alloc<termios>()
+            if (tcgetattr(STDIN_FILENO, term.ptr) == 0) {
+                // Manually copy the memory to our buffer to save the state
+                original.usePinned { pinned ->
+                    memcpy(pinned.addressOf(0), term.ptr, sizeOf<termios>().convert())
+                }
+                saved = true
 
-            val raw = alloc<termios>()
-            tcgetattr(STDIN_FILENO, raw.ptr)
-            cfmakeraw(raw.ptr)
-            tcsetattr(STDIN_FILENO, TCSAFLUSH, raw.ptr)
+                val raw = alloc<termios>()
+                tcgetattr(STDIN_FILENO, raw.ptr)
+                cfmakeraw(raw.ptr)
+                tcsetattr(STDIN_FILENO, TCSAFLUSH, raw.ptr)
 
-            // Set stdin to non-blocking so read() returns immediately
-            originalFlags = fcntl(STDIN_FILENO, F_GETFL)
-            fcntl(STDIN_FILENO, F_SETFL, originalFlags or O_NONBLOCK)
+                // Set stdin to non-blocking so read() returns immediately
+                originalFlags = fcntl(STDIN_FILENO, F_GETFL)
+                fcntl(STDIN_FILENO, F_SETFL, originalFlags or O_NONBLOCK)
+            }
         }
     }
 
     public actual fun exit() {
         if (saved) {
-            // Restore blocking mode
-            fcntl(STDIN_FILENO, F_SETFL, originalFlags)
-            tcsetattr(STDIN_FILENO, TCSAFLUSH, original.ptr)
-            saved = false
+            memScoped {
+                // Restore blocking mode
+                fcntl(STDIN_FILENO, F_SETFL, originalFlags)
+
+                // Reconstruct termios from our buffer
+                val term = alloc<termios>()
+                original.usePinned { pinned ->
+                    memcpy(term.ptr, pinned.addressOf(0), sizeOf<termios>().convert())
+                }
+                tcsetattr(STDIN_FILENO, TCSAFLUSH, term.ptr)
+                saved = false
+            }
         }
     }
 }
