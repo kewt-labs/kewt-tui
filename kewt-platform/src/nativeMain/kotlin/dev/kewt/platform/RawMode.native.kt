@@ -1,0 +1,64 @@
+/*
+* Copyright 2026 lscythe
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+* */
+package dev.kewt.platform
+
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.nativeHeap
+import kotlinx.cinterop.ptr
+import platform.posix.F_GETFL
+import platform.posix.F_SETFL
+import platform.posix.O_NONBLOCK
+import platform.posix.STDIN_FILENO
+import platform.posix.TCSAFLUSH
+import platform.posix.cfmakeraw
+import platform.posix.fcntl
+import platform.posix.tcgetattr
+import platform.posix.tcsetattr
+import platform.posix.termios
+
+@OptIn(ExperimentalForeignApi::class)
+public actual object RawMode {
+    private val original = nativeHeap.alloc<termios>()
+    private var saved = false
+    private var originalFlags = 0
+
+    public actual fun enter() {
+        memScoped {
+            tcgetattr(STDIN_FILENO, original.ptr)
+            saved = true
+
+            val raw = alloc<termios>()
+            tcgetattr(STDIN_FILENO, raw.ptr)
+            cfmakeraw(raw.ptr)
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, raw.ptr)
+
+            // Set stdin to non-blocking so read() returns immediately
+            originalFlags = fcntl(STDIN_FILENO, F_GETFL)
+            fcntl(STDIN_FILENO, F_SETFL, originalFlags or O_NONBLOCK)
+        }
+    }
+
+    public actual fun exit() {
+        if (saved) {
+            // Restore blocking mode
+            fcntl(STDIN_FILENO, F_SETFL, originalFlags)
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, original.ptr)
+            saved = false
+        }
+    }
+}

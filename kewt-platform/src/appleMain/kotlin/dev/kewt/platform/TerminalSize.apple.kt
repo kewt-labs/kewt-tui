@@ -13,29 +13,24 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
+package dev.kewt.platform
+
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import platform.posix.STDOUT_FILENO
+import platform.posix.TIOCGWINSZ
+import platform.posix.ioctl
+import platform.posix.winsize
+
+@OptIn(ExperimentalForeignApi::class)
+public actual object TerminalSize {
+    public actual fun query(): Size {
+        memScoped {
+            val ws = alloc<winsize>()
+            ioctl(STDOUT_FILENO, TIOCGWINSZ, ws.ptr)
+            return Size(ws.ws_col.toInt(), ws.ws_row.toInt())
+        }
     }
 }
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-    }
-
-}
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-rootProject.name = "kewt"
-
-include(
-    ":kewt-platform"
-)
