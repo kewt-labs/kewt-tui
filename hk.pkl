@@ -1,0 +1,30 @@
+amends "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Config.pkl"
+
+local linters = new Mapping<String, Step> {
+  ["spotless"] {
+    glob = List("**/*.kt", "**/*.kts", "**/*.xml")
+    check = "./gradlew spotlessCheck"
+    fix = "./gradlew spotlessApply"
+  }
+  ["detekt"] {
+    glob = List("**/*.kt")
+    check = "./gradlew detekt"
+  }
+}
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = linters
+  }
+  ["pre-push"] {
+    steps {
+      ...linters
+      ["test"] {
+        glob = List("**/*.kt")
+        check = "./gradlew allTests"
+      }
+    }
+  }
+}
