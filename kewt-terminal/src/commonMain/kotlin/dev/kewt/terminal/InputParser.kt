@@ -16,42 +16,91 @@
 package dev.kewt.terminal
 
 public class InputParser {
-    private val buffer = mutableListOf<Int>()
+    private var buffer = IntArray(1024)
+    private var head = 0
+    private var tail = 0
+    private var size = 0
 
-    public fun feed(byte: ByteArray, count: Int) {
-        for (i in 0 until count) buffer.add(byte[i].toInt() and 0xFF)
+    public val hasEvents: Boolean get() = size > 0
+
+    public fun feed(bytes: ByteArray, count: Int) {
+        ensureCapacity(size + count)
+        for (i in 0 until count) {
+            buffer[tail] = bytes[i].toInt() and 0xFF
+            tail = (tail + 1) % buffer.size
+            size++
+        }
     }
 
     public fun next(): Event? {
-        if (buffer.isEmpty()) return null
-        return when (val b = buffer.removeFirst()) {
+        if (size == 0) return null
+        return when (val b = peek()) {
             0x1b -> parseEscape()
-            0x0d -> KeyEvent(Key.Enter)
-            0x7f, 0x08 -> KeyEvent(Key.Backspace)
-            0x09 -> KeyEvent(Key.Tab)
-            in 1..26 -> KeyEvent(Key.Char(('a' + b - 1)), setOf(KeyModifier.Ctrl))
-            in 32..126 -> KeyEvent(Key.Char(b.toChar()))
-            else -> null
+
+            0x0d -> {
+                consume()
+                KeyEvent(Key.Enter)
+            }
+
+            0x7f, 0x08 -> {
+                consume()
+                KeyEvent(Key.Backspace)
+            }
+
+            0x09 -> {
+                consume()
+                KeyEvent(Key.Tab)
+            }
+
+            in 1..26 -> {
+                consume()
+                KeyEvent(Key.Char(('a' + b - 1)), setOf(KeyModifier.Ctrl))
+            }
+
+            in 32..126 -> {
+                consume()
+                KeyEvent(Key.Char(b.toChar()))
+            }
+
+            else -> {
+                consume()
+                null
+            }
         }
     }
 
     private fun parseEscape(): Event? {
-        if (buffer.isEmpty()) return KeyEvent(Key.Escape)
-        return when (buffer.first()) {
+        val originalHead = head
+        val originalSize = size
+
+        consume() // consume 0x1b
+
+        if (size == 0) return KeyEvent(Key.Escape)
+
+        return when (peek()) {
             '['.code -> {
-                buffer.removeFirst()
-                parseCsi()
+                consume()
+                parseCsi() ?: run {
+                    // Partial sequence, backtrack
+                    head = originalHead
+                    size = originalSize
+                    null
+                }
             }
 
             'O'.code -> {
-                buffer.removeFirst()
-                parseSs3()
+                consume()
+                parseSs3() ?: run {
+                    head = originalHead
+                    size = originalSize
+                    null
+                }
             }
 
             else -> {
-                val next = buffer.first()
+                val next = peek()
                 if (next in 32..126) {
-                    buffer.removeFirst()
+                    consume()
                     KeyEvent(Key.Char(next.toChar()), setOf(KeyModifier.Alt))
                 } else {
                     KeyEvent(Key.Escape)
@@ -61,25 +110,22 @@ public class InputParser {
     }
 
     private fun parseCsi(): Event? {
-        if (buffer.isEmpty()) return KeyEvent(Key.Escape)
-
         val params = StringBuilder()
-        while (buffer.isNotEmpty() && (buffer.first() in '0'.code..'9'.code || buffer.firstOrNull() == ';'.code)) {
-            params.append(buffer.removeFirst().toChar())
+        while (size > 0 && (peek() in '0'.code..'9'.code || peek() == ';'.code)) {
+            params.append(consume().toChar())
         }
-        if (buffer.isEmpty()) return null
-        val final = buffer.removeFirst().toChar()
+        if (size == 0) return null
+        val final = consume().toChar()
         return mapCsi(params.toString(), final)
     }
 
     private fun mapCsi(params: String, final: Char): Event? {
         val parts = params.split(';')
-        val modifiers =
-            if (parts.size >= 2) {
-                decodeModifiers(parts.last().toIntOrNull() ?: 1)
-            } else {
-                emptySet()
-            }
+        val modifiers = if (parts.size >= 2) {
+            decodeModifiers(parts.last().toIntOrNull() ?: 1)
+        } else {
+            emptySet()
+        }
         val param = parts.first()
 
         return when (final) {
@@ -129,13 +175,36 @@ public class InputParser {
     }
 
     private fun parseSs3(): Event? {
-        if (buffer.isEmpty()) return null
-        return when (buffer.removeFirst().toChar()) {
+        if (size == 0) return null
+        return when (consume().toChar()) {
             'P' -> KeyEvent(Key.F(1))
             'Q' -> KeyEvent(Key.F(2))
             'R' -> KeyEvent(Key.F(3))
             'S' -> KeyEvent(Key.F(4))
             else -> null
         }
+    }
+
+    private fun peek(): Int = buffer[head]
+
+    private fun consume(): Int {
+        val b = buffer[head]
+        head = (head + 1) % buffer.size
+        size--
+        return b
+    }
+
+    private fun ensureCapacity(required: Int) {
+        if (required <= buffer.size) return
+        var newCapacity = buffer.size * 2
+        while (newCapacity < required) newCapacity *= 2
+
+        val newBuffer = IntArray(newCapacity)
+        for (i in 0 until size) {
+            newBuffer[i] = buffer[(head + i) % buffer.size]
+        }
+        buffer = newBuffer
+        head = 0
+        tail = size
     }
 }

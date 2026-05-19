@@ -29,4 +29,5 @@ public interface Terminal {
     public fun showCursor()
     public fun clear()
     public fun clearLine()
+    public fun poll(timeoutMs: Int): Boolean
 }

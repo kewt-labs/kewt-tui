@@ -47,7 +47,14 @@ public class AnsiTerminal(
 
     override fun size(): Size = cachedSize
 
+    override fun poll(timeoutMs: Int): Boolean {
+        if (parser.hasEvents) return true
+        return PlatformIO.awaitInput(timeoutMs)
+    }
+
     override fun read(): Event? {
+        parser.next()?.let { return it }
+
         val n = PlatformIO.readBytes(readBuf, readBuf.size)
         if (n <= 0) return null
         parser.feed(readBuf, n)
