@@ -24,4 +24,6 @@ public expect object PlatformIO {
     public fun writeString(text: String)
 
     public fun flush()
+
+    public fun awaitInput(timeoutMs: Int): Boolean
 }

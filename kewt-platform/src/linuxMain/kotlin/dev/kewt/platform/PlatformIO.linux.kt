@@ -16,32 +16,21 @@
 package dev.kewt.platform
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
-import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import platform.posix.POLLIN
 import platform.posix.STDIN_FILENO
-import platform.posix.fflush
-import platform.posix.fputs
-import platform.posix.read
-import platform.posix.stdout
+import platform.posix.poll
+import platform.posix.pollfd
 
 @OptIn(ExperimentalForeignApi::class)
-public actual object PlatformIO {
-    public actual fun readBytes(buffer: ByteArray, maxLen: Int): Int {
-        buffer.usePinned { pinned ->
-            return read(STDIN_FILENO, pinned.addressOf(0), maxLen.convert()).toInt()
-        }
+internal actual fun awaitInputInternal(timeoutMs: Int): Boolean {
+    memScoped {
+        val pfd = alloc<pollfd>()
+        pfd.fd = STDIN_FILENO
+        pfd.events = POLLIN.convert()
+        return poll(pfd.ptr, 1.convert(), timeoutMs.convert()) > 0
     }
-
-    public actual fun writeString(text: String) {
-        fputs(text, stdout)
-    }
-
-    public actual fun flush() {
-        fflush(stdout)
-    }
-
-    public actual fun awaitInput(timeoutMs: Int): Boolean = awaitInputInternal(timeoutMs)
 }
-
-internal expect fun awaitInputInternal(timeoutMs: Int): Boolean
