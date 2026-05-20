@@ -25,53 +25,58 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
         out.clear()
         var lastX = -1
         var lastY = -1
-        var lastForeground: Color? = null
-        var lastBackground: Color? = null
-        var lastBold = false
-        var lastItalic = false
-        var lastUnderline = false
-        var lastStrikethrough = false
+        var lastFg = 0
+        var lastBg = 0
+        var lastFlags = 0
 
         for (y in 0 until current.height) {
+            val rowOffset = y * current.width
             for (x in 0 until current.width) {
-                val curr = current.get(x, y)
-                val prev = previous.get(x, y)
-                if (curr.sameAs(prev)) continue
+                val i = rowOffset + x
+
+                // Compare primitive data directly
+                if (current.chars[i] == previous.chars[i] &&
+                    current.fgColors[i] == previous.fgColors[i] &&
+                    current.bgColors[i] == previous.bgColors[i] &&
+                    current.flags[i] == previous.flags[i]
+                ) {
+                    continue
+                }
 
                 if (lastY != y || lastX != x) {
                     out.append("\u001b[${y + 1};${x + 1}H")
                 }
 
-                // Turn off attributes that are no longer needed
-                if (lastBold && !curr.bold) out.append("\u001b[22m")
-                if (lastItalic && !curr.italic) out.append("\u001b[23m")
-                if (lastUnderline && !curr.underline) out.append("\u001b[24m")
-                if (lastStrikethrough && !curr.strikethrough) out.append("\u001b[29m")
+                val currFlags = current.flags[i].toInt()
+                val currFg = current.fgColors[i]
+                val currBg = current.bgColors[i]
 
-                // Turn on attributes that were just enabled
-                if (!lastBold && curr.bold) out.append("\u001b[1m")
-                if (!lastItalic && curr.italic) out.append("\u001b[3m")
-                if (!lastUnderline && curr.underline) out.append("\u001b[4m")
-                if (!lastStrikethrough && curr.strikethrough) out.append("\u001b[9m")
+                // Turn off attributes
+                if ((lastFlags and 1) != 0 && (currFlags and 1) == 0) out.append("\u001b[22m")
+                if ((lastFlags and 2) != 0 && (currFlags and 2) == 0) out.append("\u001b[23m")
+                if ((lastFlags and 4) != 0 && (currFlags and 4) == 0) out.append("\u001b[24m")
+                if ((lastFlags and 8) != 0 && (currFlags and 8) == 0) out.append("\u001b[29m")
 
-                // Update colors if they changed
-                if (curr.foreground != lastForeground) {
-                    appendForeground(curr.foreground)
+                // Turn on attributes
+                if ((lastFlags and 1) == 0 && (currFlags and 1) != 0) out.append("\u001b[1m")
+                if ((lastFlags and 2) == 0 && (currFlags and 2) != 0) out.append("\u001b[3m")
+                if ((lastFlags and 4) == 0 && (currFlags and 4) != 0) out.append("\u001b[4m")
+                if ((lastFlags and 8) == 0 && (currFlags and 8) != 0) out.append("\u001b[9m")
+
+                if (currFg != lastFg) {
+                    appendForeground(Color.unpack(currFg))
                 }
-                if (curr.background != lastBackground) {
-                    appendBackground(curr.background)
+                if (currBg != lastBg) {
+                    appendBackground(Color.unpack(currBg))
                 }
 
-                out.append(curr.char)
+                out.append(current.chars[i])
 
                 lastX = x + 1
                 lastY = y
-                lastForeground = curr.foreground
-                lastBackground = curr.background
-                lastBold = curr.bold
-                lastItalic = curr.italic
-                lastUnderline = curr.underline
-                lastStrikethrough = curr.strikethrough
+                lastFg = currFg
+                lastBg = currBg
+                lastFlags = currFlags
             }
         }
 
@@ -124,7 +129,6 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
     }
 
     private fun rgbToAnsi16(r: Int, g: Int, b: Int): Int {
-        // Basic 16 color mapping based on brightness and primary components
         val isBright = r > 128 || g > 128 || b > 128
         val threshold = if (isBright) 128 else 0
         val ri = if (r > threshold) 1 else 0
@@ -138,7 +142,6 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
 
         code in 232..255 -> if (code < 244) 0 else 7
 
-        // Grayscale to Black/White
         else -> {
             val r = (code - 16) / 36
             val g = ((code - 16) % 36) / 6
