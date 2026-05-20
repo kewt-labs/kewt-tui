@@ -19,6 +19,7 @@ import dev.kewt.modifier.FillMaxHeightModifier
 import dev.kewt.modifier.FillMaxWidthModifier
 import dev.kewt.modifier.HeightModifier
 import dev.kewt.modifier.Modifier
+import dev.kewt.modifier.PaddingModifier
 import dev.kewt.modifier.WidthModifier
 import dev.kewt.modifier.WrapContentHeightModifier
 import dev.kewt.modifier.WrapContentWidthModifier
@@ -90,22 +91,23 @@ public class LayoutNode(
         val wrapW = modifier.findElement<WrapContentWidthModifier>() != null
         val wrapH = modifier.findElement<WrapContentHeightModifier>() != null
 
-        width = when {
+        val internalWidth = when {
             explicitWidth != null -> explicitWidth
             wrapW -> result.width.coerceAtMost(outerConstraints.maxWidth)
             fillW != null -> (outerConstraints.maxWidth * fillW.fraction).toInt()
             else -> result.width.coerceAtMost(outerConstraints.maxWidth)
         }
-        height = when {
+        val internalHeight = when {
             explicitHeight != null -> explicitHeight
             wrapH -> result.height.coerceAtMost(outerConstraints.maxHeight)
             fillH != null -> (outerConstraints.maxHeight * fillH.fraction).toInt()
             else -> result.height.coerceAtMost(outerConstraints.maxHeight)
         }
 
-        // Add margins back for final reported size if needed,
-        // but typically parents only care about the node's bounds.
-        return MeasureResult(width + ml + mr, height + mt + mb)
+        width = internalWidth + ml + mr
+        height = internalHeight + mt + mb
+
+        return MeasureResult(width, height)
     }
 
     public fun place(
@@ -129,7 +131,7 @@ public class LayoutNode(
                 var cx = x + pl
                 children.forEach {
                     it.place(cx, y + pt)
-                    cx += it.width // Use total width (including margin if returned by measure)
+                    cx += it.width
                 }
             }
 
