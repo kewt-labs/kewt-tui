@@ -15,6 +15,12 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Utilities for querying the terminal's physical dimensions.
+ */
 public expect object TerminalSize {
+    /**
+     * Queries the current width and height of the terminal.
+     */
     public fun query(): Size
 }

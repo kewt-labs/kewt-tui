@@ -15,7 +15,20 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Manages the terminal's raw mode state.
+ *
+ * Raw mode disables line buffering and local echo, allowing the application
+ * to process individual key presses as they occur.
+ */
 public expect object RawMode {
+    /**
+     * Enters terminal raw mode.
+     */
     public fun enter()
+
+    /**
+     * Exits terminal raw mode and restores the original terminal state.
+     */
     public fun exit()
 }

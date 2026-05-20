@@ -15,4 +15,7 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Returns the current system time in milliseconds.
+ */
 public expect fun currentTimeMs(): Long

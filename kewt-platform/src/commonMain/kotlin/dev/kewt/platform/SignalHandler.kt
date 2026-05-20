@@ -15,7 +15,17 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Manages registration of handlers for POSIX signals.
+ */
 public expect object SignalHandler {
+    /**
+     * Registers a [handler] for the specified [signal].
+     */
     public fun register(signal: PosixSignal, handler: () -> Unit)
+
+    /**
+     * Unregisters any existing handler for the specified [signal].
+     */
     public fun unregister(signal: PosixSignal)
 }

@@ -15,15 +15,35 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Provides low-level input and output operations for the terminal.
+ */
 public expect object PlatformIO {
+    /**
+     * Reads up to [maxLen] bytes into the provided [buffer].
+     *
+     * @return The number of bytes actually read.
+     */
     public fun readBytes(
         buffer: ByteArray,
         maxLen: Int,
     ): Int
 
+    /**
+     * Writes the provided [text] to the standard output.
+     */
     public fun writeString(text: String)
 
+    /**
+     * Flushes the standard output buffer.
+     */
     public fun flush()
 
+    /**
+     * Waits for input to become available on stdin.
+     *
+     * @param timeoutMs The maximum time to wait in milliseconds. -1 for infinite.
+     * @return true if input is available, false if the timeout was reached.
+     */
     public fun awaitInput(timeoutMs: Int): Boolean
 }

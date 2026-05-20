@@ -15,8 +15,16 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Enumeration of supported POSIX signals.
+ */
 public enum class PosixSignal {
+    /** Signal sent when the terminal window size changes. */
     SIGWINCH,
+
+    /** Signal sent when the user interrupts the process (e.g., Ctrl+C). */
     SIGINT,
+
+    /** Signal sent to request process termination. */
     SIGTERM,
 }

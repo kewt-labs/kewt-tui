@@ -15,4 +15,10 @@
 * */
 package dev.kewt.platform
 
+/**
+ * Represents a two-dimensional size in characters.
+ *
+ * @property width The number of columns.
+ * @property height The number of rows.
+ */
 public data class Size(val width: Int, val height: Int)
