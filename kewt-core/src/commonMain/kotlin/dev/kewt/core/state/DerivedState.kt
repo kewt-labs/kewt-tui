@@ -21,7 +21,7 @@ import dev.kewt.core.runtime.Scope
  * Creates a [State] whose value is calculated from other state objects.
  *
  * The [calculation] is only re-executed when one of its dependencies changes.
- * The result is cached for subsequent reads.
+ * The result is cached for later reads.
  */
 public fun <T> derivedStateOf(calculation: () -> T): State<T> = DerivedState(calculation)
 

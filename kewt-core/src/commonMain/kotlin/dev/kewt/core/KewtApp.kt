@@ -303,7 +303,7 @@ public class KewtApp internal constructor(
     }
 
     /**
-     * Registers a handler for a specific key combination (key + modifiers).
+     * Registers a handler for a specific key combination (key plus modifiers).
      */
     public fun onKey(
         key: Key,

@@ -27,11 +27,11 @@ import kotlin.concurrent.AtomicReference
 public object Snapshot {
     internal var currentScope: Scope? = null
 
-    // Use thread-safe map storage with Copy-on-Write pattern for multi-threaded safety
+    // Use thread-safe map storage with Copy-on-Write pattern for multithreaded safety
     private val observers = AtomicReference<Map<State<*>, Set<Scope>>>(emptyMap())
 
     /**
-     * Records a read access to a [state] object within the current active scope.
+     * Records read access to a [state] object within the current active scope.
      */
     internal fun onRead(state: State<*>) {
         val scope = currentScope ?: return
