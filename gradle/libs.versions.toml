@@ -1,14 +1,16 @@
 [versions]
+coroutines = "1.11.0"
 detekt = "2.0.0-alpha.3"
 dokka = "2.2.0"
 faireDetekt = "0.5.3"
 kotlin = "2.3.21"
 kover = "0.9.8"
-spotless = "8.5.1"
 ktlint = "1.8.0"
+spotless = "8.5.1"
 
 [libraries]
 faire-detekt-rules = { module = "com.faire:faire-detekt-rules", version.ref = "faireDetekt" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 
 # Gradle Plugin
 detekt-gradlePlugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }

@@ -22,6 +22,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/build-logic" />
             <option value="$PROJECT_DIR$/build-logic/convention" />
+            <option value="$PROJECT_DIR$/kewt-core" />
             <option value="$PROJECT_DIR$/kewt-modifier" />
             <option value="$PROJECT_DIR$/kewt-platform" />
             <option value="$PROJECT_DIR$/kewt-terminal" />

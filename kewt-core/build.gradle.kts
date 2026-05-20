@@ -13,32 +13,17 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-    }
-
-}
-
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    alias(libs.plugins.kewt.kmp.library)
+    alias(libs.plugins.kewt.quality)
 }
 
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-rootProject.name = "kewt"
-
-include(
-    ":kewt-core",
-    ":kewt-modifier",
-    ":kewt-platform",
-    ":kewt-terminal",
-)
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(projects.kewtTerminal)
+            api(projects.kewtModifier)
+            api(libs.kotlinx.coroutines.core)
+        }
+    }
+}
