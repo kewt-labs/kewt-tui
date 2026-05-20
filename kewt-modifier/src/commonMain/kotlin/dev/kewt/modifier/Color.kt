@@ -47,5 +47,39 @@ public sealed class Color {
         public fun rgb(hex: Int): Color = RGB(hex)
 
         public fun rgb(r: Int, g: Int, b: Int): Color = RGB(r, g, b)
+
+        /**
+         * Packs a Color into a primitive Int for efficient storage.
+         */
+        public fun pack(color: Color): Int = when (color) {
+            Default -> 0
+
+            is Ansi16 -> color.code + 1
+
+            is Ansi256 -> color.code + 17
+
+            is RGB -> {
+                val rgb = (color.r shl 16) or (color.g shl 8) or color.b
+                rgb or (1 shl 31) // Set sign bit to indicate RGB
+            }
+        }
+
+        /**
+         * Unpacks a Color from a primitive Int.
+         */
+        public fun unpack(packed: Int): Color = when {
+            packed == 0 -> Default
+
+            packed in 1..16 -> Ansi16(packed - 1)
+
+            packed in 17..272 -> Ansi256(packed - 17)
+
+            packed < 0 -> {
+                val rgb = packed and (1 shl 31).inv()
+                RGB((rgb shr 16) and 0xFF, (rgb shr 8) and 0xFF, rgb and 0xFF)
+            }
+
+            else -> Default
+        }
     }
 }
