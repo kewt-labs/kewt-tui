@@ -17,17 +17,31 @@ package dev.kewt.core.state
 
 import kotlin.concurrent.AtomicReference
 
+/**
+ * Creates a thread-safe observable map initialized with [pairs].
+ */
 public fun <K, V> mutableStateMapOf(vararg pairs: Pair<K, V>): SnapshotStateMap<K, V> =
     SnapshotStateMap(pairs.toMap())
 
+/**
+ * An implementation of [MutableMap] that integrates with the [Snapshot] system.
+ *
+ * This map uses a copy-on-write strategy to provide consistency during access.
+ */
 public class SnapshotStateMap<K, V> internal constructor(initial: Map<K, V>) : MutableMap<K, V> {
     private val version = mutableStateOf(0)
     private val backing = AtomicReference<Map<K, V>>(initial)
 
+    /**
+     * Registers a read dependency on the map version.
+     */
     private fun read() {
         version.value
     }
 
+    /**
+     * Atomically updates the map and increments the version to notify observers.
+     */
     private fun write(update: (Map<K, V>) -> Map<K, V>) {
         while (true) {
             val old = backing.value

@@ -17,21 +17,44 @@ package dev.kewt.core.state
 
 import kotlin.reflect.KProperty
 
+/**
+ * Represents a value that can be observed by the framework.
+ *
+ * When a [State] is read within a reactive scope (like a view block), the scope
+ * becomes a dependency of that state and will be notified when the value changes.
+ */
 public interface State<out T> {
+    /**
+     * The current value of the state.
+     */
     public val value: T
 }
 
+/**
+ * A [State] whose value can be updated.
+ *
+ * Updating the [value] will trigger notifications to all observing scopes.
+ */
 public interface MutableState<T> : State<T> {
     public override var value: T
 }
 
+/**
+ * Creates a new [MutableState] initialized with [initial].
+ */
 public fun <T> mutableStateOf(initial: T): MutableState<T> = MutableStateImpl(initial)
 
+/**
+ * Delegate for reading [State] values using the `by` keyword.
+ */
 public operator fun <T> State<T>.getValue(
     thisRef: Any?,
     property: KProperty<*>,
 ): T = value
 
+/**
+ * Delegate for updating [MutableState] values using the `by` keyword.
+ */
 public operator fun <T> MutableState<T>.setValue(
     thisRef: Any?,
     property: KProperty<*>,
@@ -40,6 +63,9 @@ public operator fun <T> MutableState<T>.setValue(
     this.value = value
 }
 
+/**
+ * Implementation of [MutableState] that hooks into the [Snapshot] system.
+ */
 internal class MutableStateImpl<T>(initial: T) : MutableState<T> {
     override var value: T = initial
         get() {

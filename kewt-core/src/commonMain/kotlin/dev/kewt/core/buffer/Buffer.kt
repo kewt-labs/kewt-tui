@@ -17,6 +17,15 @@ package dev.kewt.core.buffer
 
 import dev.kewt.modifier.Color
 
+/**
+ * Represents a grid of characters and their associated styles.
+ *
+ * The buffer uses primitive arrays to store data internally for efficient management
+ * of terminal cell data.
+ *
+ * @property width The horizontal dimension of the buffer in characters.
+ * @property height The vertical dimension of the buffer in characters.
+ */
 public class Buffer(
     public val width: Int,
     public val height: Int,
@@ -26,6 +35,12 @@ public class Buffer(
     internal val bgColors = IntArray(width * height) { 0 }
     internal val flags = ByteArray(width * height) { 0 }
 
+    /**
+     * Retrieves the contents of a specific cell as a [Cell] object.
+     *
+     * Note: This method creates a new [Cell] instance. Direct access to internal
+     * arrays can be used to avoid object creation.
+     */
     public fun get(x: Int, y: Int): Cell {
         if (x !in 0..<width || y !in 0..<height) return Cell()
         val i = y * width + x
@@ -41,6 +56,9 @@ public class Buffer(
         )
     }
 
+    /**
+     * Sets the character and styles for a specific cell.
+     */
     public fun setChar(
         x: Int,
         y: Int,
@@ -66,6 +84,11 @@ public class Buffer(
         flags[i] = f.toByte()
     }
 
+    /**
+     * Writes a string into the buffer at the specified coordinates.
+     *
+     * Text that exceeds the buffer width will be truncated.
+     */
     public fun writeString(
         x: Int,
         y: Int,
@@ -88,6 +111,9 @@ public class Buffer(
         }
     }
 
+    /**
+     * Resets the entire buffer to default characters and styles.
+     */
     public fun clear() {
         chars.fill(' ')
         fgColors.fill(0)

@@ -17,17 +17,31 @@ package dev.kewt.core.state
 
 import kotlin.concurrent.AtomicReference
 
+/**
+ * Creates a thread-safe observable list initialized with [items].
+ */
 public fun <T> mutableStateListOf(vararg items: T): SnapshotStateList<T> =
     SnapshotStateList(items.toList())
 
+/**
+ * An implementation of [MutableList] that integrates with the [Snapshot] system.
+ *
+ * This list uses a copy-on-write strategy to provide consistency during iteration.
+ */
 public class SnapshotStateList<T> internal constructor(initial: List<T>) : MutableList<T> {
     private val version = mutableStateOf(0)
     private val backing = AtomicReference<List<T>>(initial)
 
+    /**
+     * Registers a read dependency on the list version.
+     */
     private fun read() {
         version.value
     }
 
+    /**
+     * Atomically updates the list and increments the version to notify observers.
+     */
     private fun write(update: (List<T>) -> List<T>) {
         while (true) {
             val old = backing.value
@@ -156,7 +170,9 @@ public class SnapshotStateList<T> internal constructor(initial: List<T>) : Mutab
         write { emptyList() }
     }
 
-    // Iterators must return a snapshot of the current state to be thread-safe
+    /**
+     * Returns a thread-safe iterator over a snapshot of the list.
+     */
     override fun iterator(): MutableIterator<T> = listIterator()
 
     override fun listIterator(): MutableListIterator<T> = listIterator(0)

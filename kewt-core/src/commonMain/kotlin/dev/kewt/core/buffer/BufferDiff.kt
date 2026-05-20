@@ -18,9 +18,19 @@ package dev.kewt.core.buffer
 import dev.kewt.modifier.Color
 import dev.kewt.terminal.ColorMode
 
+/**
+ * Calculates the difference between two [Buffer] instances and generates ANSI escape sequences.
+ *
+ * This class identifies changed cells and updates styles using additive ANSI sequences.
+ *
+ * @param colorMode The [ColorMode] supported by the target terminal.
+ */
 public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) {
     private val out = StringBuilder()
 
+    /**
+     * Generates an ANSI string that transforms the [previous] buffer into the [current] one.
+     */
     public fun diff(current: Buffer, previous: Buffer): String {
         out.clear()
         var lastX = -1
@@ -98,10 +108,13 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
             Color.Default -> out.append("\u001b[49m")
             is Color.Ansi16 -> out.append("\u001b[${if (c.code < 8) 40 + c.code else 100 + c.code - 8}m")
             is Color.Ansi256 -> out.append("\u001b[48;5;${c.code}m")
-            is Color.RGB -> out.append("\u001b[48;2;${c.r};${c.g};${c.b}m")
+            is Color.RGB -> out.append("\u001b[38;2;${c.r};${c.g};${c.b}m")
         }
     }
 
+    /**
+     * Maps a high-resolution color to a lower-resolution one supported by the current [colorMode].
+     */
     private fun downgrade(color: Color): Color = when (colorMode) {
         ColorMode.TrueColor -> color
 

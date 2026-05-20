@@ -17,6 +17,9 @@ package dev.kewt.core.buffer
 
 import dev.kewt.modifier.Color
 
+/**
+ * A data container representing the visual state of a single terminal cell.
+ */
 public data class Cell(
     public var char: Char = ' ',
     public var foreground: Color = Color.Default,
@@ -26,6 +29,9 @@ public data class Cell(
     public var underline: Boolean = false,
     public var strikethrough: Boolean = false,
 ) {
+    /**
+     * Resets the cell to its default state.
+     */
     public fun reset() {
         char = ' '
         foreground = Color.Default
@@ -36,6 +42,9 @@ public data class Cell(
         strikethrough = false
     }
 
+    /**
+     * Checks if this cell has exactly the same character and styles as another.
+     */
     public fun sameAs(other: Cell): Boolean =
         char == other.char && foreground == other.foreground &&
             background == other.background && bold == other.bold &&

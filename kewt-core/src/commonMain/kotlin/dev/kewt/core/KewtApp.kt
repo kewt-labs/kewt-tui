@@ -36,6 +36,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import kotlin.time.Duration
 
+/**
+ * Entry point for creating and running a Kewt TUI application.
+ *
+ * This function initializes the terminal, sets up the application scope, and starts the main event loop.
+ *
+ * @param terminal The [Terminal] implementation to use. Defaults to [AnsiTerminal].
+ * @param content A lambda that configures the [KewtApp] instance.
+ */
 public fun kewt(
     terminal: Terminal = AnsiTerminal(),
     content: KewtApp.() -> Unit,
@@ -46,6 +54,14 @@ public fun kewt(
     }
 }
 
+/**
+ * Represents a Kewt application instance.
+ *
+ * Managed the application lifecycle, input dispatching, state observation, and rendering.
+ *
+ * @property terminal The terminal instance used for IO.
+ * @param parentScope The coroutine scope from which the application scope is derived.
+ */
 public class KewtApp internal constructor(
     private val terminal: Terminal,
     parentScope: CoroutineScope,
@@ -71,6 +87,9 @@ public class KewtApp internal constructor(
             }
         }
 
+    /**
+     * Initializes the terminal state and enters the main loop.
+     */
     internal suspend fun run(content: KewtApp.() -> Unit) {
         terminal.enterRawMode()
         terminal.hideCursor()
@@ -94,6 +113,9 @@ public class KewtApp internal constructor(
         }
     }
 
+    /**
+     * The main event loop that handles window resizing, input polling, and rendering.
+     */
     private suspend fun loop() {
         while (running) {
             val size = terminal.size()
@@ -119,6 +141,9 @@ public class KewtApp internal constructor(
         }
     }
 
+    /**
+     * Dispatches input events to the registered handlers.
+     */
     private fun dispatchEvent(event: Event) {
         when (event) {
             is KeyEvent -> {
@@ -145,6 +170,9 @@ public class KewtApp internal constructor(
         }
     }
 
+    /**
+     * Executes the view function and captures state dependencies.
+     */
     private fun render() {
         needsRender = false
         currentBuffer.clear()
@@ -165,6 +193,9 @@ public class KewtApp internal constructor(
         }
     }
 
+    /**
+     * Renders a crash screen when an unhandled exception occurs in the view block.
+     */
     private fun renderCrashScreen(e: Throwable) {
         currentBuffer.clear()
         val bg = Color.Blue
@@ -190,6 +221,9 @@ public class KewtApp internal constructor(
         onKeyEvent { quit() }
     }
 
+    /**
+     * Diffs the current buffer against the previous one and writes changes to the terminal.
+     */
     private fun flush() {
         val output = diff.diff(currentBuffer, previousBuffer)
         if (output.isNotEmpty()) {
@@ -202,10 +236,21 @@ public class KewtApp internal constructor(
         currentBuffer.clear()
     }
 
+    /**
+     * Sets the main view function for the application.
+     *
+     * @param block A lambda that defines how to draw the application state into the [Buffer].
+     */
     public fun view(block: Buffer.() -> Unit) {
         viewFn = block
     }
 
+    /**
+     * Schedules a repeated background task.
+     *
+     * @param interval The delay between executions.
+     * @param block The task to execute.
+     */
     public fun every(
         interval: Duration,
         block: () -> Unit,
@@ -219,10 +264,16 @@ public class KewtApp internal constructor(
         }
     }
 
+    /**
+     * Stops the application and exits the main loop.
+     */
     public fun quit() {
         running = false
     }
 
+    /**
+     * Registers a handler for a simple character key press.
+     */
     public fun onKey(
         char: Char,
         handler: () -> Unit,
@@ -230,18 +281,30 @@ public class KewtApp internal constructor(
         keyHandlers[char] = handler
     }
 
+    /**
+     * Registers a low-level key event handler.
+     */
     public fun onKeyEvent(handler: (KeyEvent) -> Unit) {
         keyEventHandler = handler
     }
 
+    /**
+     * Registers a handler for the Tab key.
+     */
     public fun onTab(handler: () -> Unit) {
         tabHandler = handler
     }
 
+    /**
+     * Registers a handler for the Shift-Tab (BackTab) key.
+     */
     public fun onBackTab(handler: () -> Unit) {
         backTabHandler = handler
     }
 
+    /**
+     * Registers a handler for a specific key combination (key + modifiers).
+     */
     public fun onKey(
         key: Key,
         modifiers: Set<KeyModifier>,
@@ -251,6 +314,9 @@ public class KewtApp internal constructor(
     }
 }
 
+/**
+ * Represents a specific key combination used for input handling.
+ */
 private class KeyCombo(
     val key: Key,
     val modifiers: Set<KeyModifier>,

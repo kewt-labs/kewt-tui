@@ -15,6 +15,15 @@
 * */
 package dev.kewt.core.runtime
 
+/**
+ * Represents a reactive context that can be marked as needing a refresh.
+ *
+ * Scopes are typically associated with UI components or render blocks that
+ * depend on observable state.
+ */
 public interface Scope {
+    /**
+     * Notifies the scope that its dependencies have changed and it should be re-executed.
+     */
     public fun markDirty()
 }
