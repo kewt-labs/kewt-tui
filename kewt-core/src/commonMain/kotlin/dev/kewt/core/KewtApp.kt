@@ -19,6 +19,7 @@ import dev.kewt.core.buffer.Buffer
 import dev.kewt.core.buffer.BufferDiff
 import dev.kewt.core.runtime.Scope
 import dev.kewt.core.state.Snapshot
+import dev.kewt.modifier.Color
 import dev.kewt.terminal.AnsiTerminal
 import dev.kewt.terminal.Event
 import dev.kewt.terminal.Key
@@ -61,6 +62,7 @@ public class KewtApp internal constructor(
     private var tabHandler: (() -> Unit)? = null
     private var backTabHandler: (() -> Unit)? = null
     private var viewFn: (Buffer.() -> Unit)? = null
+    private var crashException: Throwable? = null
 
     private val renderScope =
         object : Scope {
@@ -146,10 +148,46 @@ public class KewtApp internal constructor(
     private fun render() {
         needsRender = false
         currentBuffer.clear()
-        val fn = viewFn ?: return
-        Snapshot.observe(renderScope) {
-            fn.invoke(currentBuffer)
+
+        if (crashException != null) {
+            renderCrashScreen(crashException!!)
+            return
         }
+
+        val fn = viewFn ?: return
+        try {
+            Snapshot.observe(renderScope) {
+                fn.invoke(currentBuffer)
+            }
+        } catch (e: Throwable) {
+            crashException = e
+            renderCrashScreen(e)
+        }
+    }
+
+    private fun renderCrashScreen(e: Throwable) {
+        currentBuffer.clear()
+        val bg = Color.Blue
+        val fg = Color.White
+
+        for (y in 0 until currentBuffer.height) {
+            for (x in 0 until currentBuffer.width) {
+                currentBuffer.setChar(x, y, ' ', foreground = fg, background = bg)
+            }
+        }
+
+        currentBuffer.writeString(2, 2, "KEWT FRAMEWORK CRASH", foreground = fg, background = bg, bold = true)
+        currentBuffer.writeString(2, 4, "An unhandled exception occurred in the view block:", foreground = fg, background = bg)
+        currentBuffer.writeString(2, 6, e.toString(), foreground = Color.BrightYellow, background = bg, bold = true)
+
+        val stackTrace = e.stackTraceToString().lines().take(currentBuffer.height - 10)
+        stackTrace.forEachIndexed { i, line ->
+            currentBuffer.writeString(2, 8 + i, line.take(currentBuffer.width - 4), foreground = fg, background = bg)
+        }
+
+        currentBuffer.writeString(2, currentBuffer.height - 2, "Press any key to exit...", foreground = fg, background = bg, italic = true)
+
+        onKeyEvent { quit() }
     }
 
     private fun flush() {
