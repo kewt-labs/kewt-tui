@@ -224,7 +224,7 @@ public class KewtApp internal constructor(
 
         currentBuffer.writeString(2, currentBuffer.height - 2, "Press any key to exit...", foreground = fg, background = bg, italic = true)
 
-        onKeyEvent { quit() }
+        onKeyEvent { exit() }
     }
 
     /**
@@ -273,7 +273,7 @@ public class KewtApp internal constructor(
     /**
      * Stops the application and exits the main loop.
      */
-    public fun quit() {
+    public fun exit() {
         running = false
     }
 
