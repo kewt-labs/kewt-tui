@@ -62,10 +62,30 @@ public interface Terminal {
     public fun clearLine()
 
     /**
+     * Sets the terminal window title.
+     *
+     * @param title The new title to display.
+     */
+    public fun setTitle(title: String)
+
+    /**
      * Waits for input to become available.
      *
      * @param timeoutMs Maximum time to wait in milliseconds.
      * @return true if input is available, false otherwise.
      */
     public fun poll(timeoutMs: Int): Boolean
+}
+
+/**
+ * Safely enters raw mode, executes the [block], and ensures raw mode is exited
+ * even if an exception occurs.
+ */
+public inline fun <T> Terminal.useRawMode(block: (Terminal) -> T): T {
+    enterRawMode()
+    try {
+        return block(this)
+    } finally {
+        exitRawMode()
+    }
 }

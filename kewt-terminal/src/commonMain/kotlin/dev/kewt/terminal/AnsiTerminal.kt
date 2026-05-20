@@ -98,4 +98,8 @@ public class AnsiTerminal(
     override fun clearLine() {
         write("\u001b[2K")
     }
+
+    override fun setTitle(title: String) {
+        write("\u001b]0;$title\u0007")
+    }
 }
