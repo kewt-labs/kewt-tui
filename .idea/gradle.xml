@@ -26,6 +26,7 @@
             <option value="$PROJECT_DIR$/kewt-modifier" />
             <option value="$PROJECT_DIR$/kewt-platform" />
             <option value="$PROJECT_DIR$/kewt-terminal" />
+            <option value="$PROJECT_DIR$/kewt-test" />
           </set>
         </option>
         <option name="myGradleHome" value="" />
