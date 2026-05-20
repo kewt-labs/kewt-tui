@@ -59,5 +59,9 @@ gradlePlugin {
             id = "kewt.kmp.library"
             implementationClass = "KmpLibraryConventionPlugin"
         }
+        register("kewtExampleApplication") {
+            id = "kewt.example.application"
+            implementationClass = "KewtExampleApplicationConventionPlugin"
+        }
     }
 }
