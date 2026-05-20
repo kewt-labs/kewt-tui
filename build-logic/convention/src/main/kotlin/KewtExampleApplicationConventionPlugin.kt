@@ -30,7 +30,7 @@ class KewtExampleApplicationConventionPlugin : Plugin<Project> {
                 configureTarget()
 
                 targets.withType<KotlinNativeTarget> {
-                    if (project.name.startsWith("example")) {
+                    if (project.name.startsWith("examples")) {
                         binaries {
                             executable {
                                 entryPoint = "main"
