@@ -80,6 +80,12 @@ public class KewtApp internal constructor(
     private var viewFn: (Buffer.() -> Unit)? = null
     private var crashException: Throwable? = null
 
+    /**
+     * A map of arbitrary attributes associated with this application instance.
+     * Can be used by framework extensions to store persistent state.
+     */
+    public val attributes: MutableMap<String, Any?> = mutableMapOf()
+
     private val renderScope =
         object : Scope {
             override fun markDirty() {
