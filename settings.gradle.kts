@@ -43,4 +43,5 @@ include(
     ":kewt-platform",
     ":kewt-terminal",
     ":kewt-test",
+    ":kewt-ui",
 )
