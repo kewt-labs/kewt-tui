@@ -120,4 +120,16 @@ public class Buffer(
         bgColors.fill(0)
         flags.fill(0)
     }
+
+    /**
+     * Sets the background color of a specific cell.
+     */
+    public fun setBackground(
+        x: Int,
+        y: Int,
+        color: Color,
+    ) {
+        if (x !in 0..<width || y !in 0..<height) return
+        bgColors[y * width + x] = Color.pack(color)
+    }
 }
