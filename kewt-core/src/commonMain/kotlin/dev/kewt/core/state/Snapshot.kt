@@ -16,28 +16,47 @@
 package dev.kewt.core.state
 
 import dev.kewt.core.runtime.Scope
+import kotlin.concurrent.AtomicReference
 
 public object Snapshot {
     internal var currentScope: Scope? = null
-    private val observers = mutableMapOf<State<*>, MutableSet<Scope>>()
+
+    // Use thread-safe map storage with Copy-on-Write pattern for multi-threaded safety
+    private val observers = AtomicReference<Map<State<*>, Set<Scope>>>(emptyMap())
 
     internal fun onRead(state: State<*>) {
-        currentScope?.let { scope ->
-            observers.getOrPut(state) { mutableSetOf() }.add(scope)
+        val scope = currentScope ?: return
+
+        while (true) {
+            val old = observers.value
+            val currentSet = old[state] ?: emptySet()
+            if (scope in currentSet) return
+
+            val new = old + (state to (currentSet + scope))
+            if (observers.compareAndSet(old, new)) break
         }
     }
 
     internal fun notifyWrite(state: State<*>) {
-        val impactedScopes = observers.remove(state)
+        var impactedScopes: Set<Scope>? = null
+
+        while (true) {
+            val old = observers.value
+            impactedScopes = old[state]
+            if (impactedScopes == null) return
+
+            val new = old - state
+            if (observers.compareAndSet(old, new)) break
+        }
+
         impactedScopes?.forEach { it.markDirty() }
     }
 
     internal fun removeScope(scope: Scope) {
-        val iterator = observers.values.iterator()
-        while (iterator.hasNext()) {
-            val set = iterator.next()
-            set.remove(scope)
-            if (set.isEmpty()) iterator.remove()
+        while (true) {
+            val old = observers.value
+            val new = old.mapValues { it.value - scope }.filterValues { it.isNotEmpty() }
+            if (observers.compareAndSet(old, new)) break
         }
     }
 

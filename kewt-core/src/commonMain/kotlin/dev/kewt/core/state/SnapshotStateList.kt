@@ -15,130 +15,159 @@
 * */
 package dev.kewt.core.state
 
-public fun <T> mutableStateListOf(vararg items: T): SnapshotStateList<T> = SnapshotStateList(items.toMutableList())
+import kotlin.concurrent.AtomicReference
 
-public class SnapshotStateList<T> internal constructor(private val backing: MutableList<T>) : MutableList<T> {
+public fun <T> mutableStateListOf(vararg items: T): SnapshotStateList<T> =
+    SnapshotStateList(items.toList())
+
+public class SnapshotStateList<T> internal constructor(initial: List<T>) : MutableList<T> {
     private val version = mutableStateOf(0)
+    private val backing = AtomicReference<List<T>>(initial)
 
     private fun read() {
         version.value
     }
 
-    private fun write() {
+    private fun write(update: (List<T>) -> List<T>) {
+        while (true) {
+            val old = backing.value
+            val new = update(old)
+            if (backing.compareAndSet(old, new)) break
+        }
         version.value++
     }
 
     override val size: Int
         get() {
             read()
-            return backing.size
+            return backing.value.size
         }
 
     override fun isEmpty(): Boolean {
         read()
-        return backing.isEmpty()
+        return backing.value.isEmpty()
     }
 
     override fun contains(element: T): Boolean {
         read()
-        return backing.contains(element)
+        return backing.value.contains(element)
     }
 
     override fun containsAll(elements: Collection<T>): Boolean {
         read()
-        return backing.containsAll(elements)
+        return backing.value.containsAll(elements)
     }
 
     override fun get(index: Int): T {
         read()
-        return backing[index]
+        return backing.value[index]
     }
 
     override fun indexOf(element: T): Int {
         read()
-        return backing.indexOf(element)
+        return backing.value.indexOf(element)
     }
 
     override fun lastIndexOf(element: T): Int {
         read()
-        return backing.lastIndexOf(element)
+        return backing.value.lastIndexOf(element)
     }
 
-    override fun iterator(): MutableIterator<T> {
-        read()
-        return backing.iterator()
+    override fun add(element: T): Boolean {
+        write { it + element }
+        return true
     }
 
-    override fun listIterator(): MutableListIterator<T> {
-        read()
-        return backing.listIterator()
+    override fun add(index: Int, element: T) {
+        write {
+            val list = it.toMutableList()
+            list.add(index, element)
+            list
+        }
     }
+
+    override fun addAll(elements: Collection<T>): Boolean {
+        write { it + elements }
+        return true
+    }
+
+    override fun addAll(index: Int, elements: Collection<T>): Boolean {
+        write {
+            val list = it.toMutableList()
+            list.addAll(index, elements)
+            list
+        }
+        return true
+    }
+
+    override fun remove(element: T): Boolean {
+        var removed = false
+        write {
+            val list = it.toMutableList()
+            removed = list.remove(element)
+            list
+        }
+        return removed
+    }
+
+    override fun removeAt(index: Int): T {
+        var result: T? = null
+        write {
+            val list = it.toMutableList()
+            result = list.removeAt(index)
+            list
+        }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
+    }
+
+    override fun removeAll(elements: Collection<T>): Boolean {
+        var removed = false
+        write {
+            val list = it.toMutableList()
+            removed = list.removeAll(elements)
+            list
+        }
+        return removed
+    }
+
+    override fun retainAll(elements: Collection<T>): Boolean {
+        var changed = false
+        write {
+            val list = it.toMutableList()
+            changed = list.retainAll(elements)
+            list
+        }
+        return changed
+    }
+
+    override fun set(index: Int, element: T): T {
+        var oldElement: T? = null
+        write {
+            val list = it.toMutableList()
+            oldElement = list.set(index, element)
+            list
+        }
+        @Suppress("UNCHECKED_CAST")
+        return oldElement as T
+    }
+
+    override fun clear() {
+        write { emptyList() }
+    }
+
+    // Iterators must return a snapshot of the current state to be thread-safe
+    override fun iterator(): MutableIterator<T> = listIterator()
+
+    override fun listIterator(): MutableListIterator<T> = listIterator(0)
 
     override fun listIterator(index: Int): MutableListIterator<T> {
         read()
-        return backing.listIterator(index)
+        return backing.value.toMutableList().listIterator(index)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<T> {
         read()
-        return backing.subList(fromIndex, toIndex)
-    }
-
-    override fun add(element: T): Boolean {
-        val r = backing.add(element)
-        write()
-        return r
-    }
-
-    override fun add(index: Int, element: T) {
-        backing.add(index, element)
-        write()
-    }
-
-    override fun addAll(elements: Collection<T>): Boolean {
-        val r = backing.addAll(elements)
-        write()
-        return r
-    }
-
-    override fun addAll(index: Int, elements: Collection<T>): Boolean {
-        val r = backing.addAll(index, elements)
-        write()
-        return r
-    }
-
-    override fun remove(element: T): Boolean {
-        val r = backing.remove(element)
-        write()
-        return r
-    }
-
-    override fun removeAt(index: Int): T {
-        val r = backing.removeAt(index)
-        write()
-        return r
-    }
-
-    override fun removeAll(elements: Collection<T>): Boolean {
-        val r = backing.removeAll(elements)
-        write()
-        return r
-    }
-
-    override fun retainAll(elements: Collection<T>): Boolean {
-        val r = backing.retainAll(elements)
-        write()
-        return r
-    }
-
-    override fun set(index: Int, element: T): T {
-        val r = backing.set(index, element)
-        write()
-        return r
-    }
-
-    override fun clear() {
-        backing.clear()
-        write()
+        return backing.value.subList(fromIndex, toIndex).toMutableList()
     }
 }
