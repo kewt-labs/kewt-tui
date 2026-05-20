@@ -225,3 +225,25 @@ public fun Modifier.totalMargin(): MarginModifier = foldIn(MarginModifier()) { a
         acc
     }
 }
+
+/**
+ * An element that applies a relative offset to a UI component.
+ */
+public data class OffsetModifier(val x: Int = 0, val y: Int = 0) : Modifier.Element
+
+/** Applies a relative [x] and [y] offset. */
+public fun Modifier.offset(x: Int = 0, y: Int = 0): Modifier = then(OffsetModifier(x, y))
+
+/**
+ * Accumulates all [OffsetModifier] elements in the chain into a single result.
+ */
+public fun Modifier.totalOffset(): OffsetModifier = foldIn(OffsetModifier()) { acc, element ->
+    if (element is OffsetModifier) {
+        acc.copy(
+            x = acc.x + element.x,
+            y = acc.y + element.y,
+        )
+    } else {
+        acc
+    }
+}
