@@ -15,7 +15,11 @@
 * */
 package dev.kewt.terminal
 
+/**
+ * Represents a key on the keyboard.
+ */
 public sealed class Key {
+    /** A regular character key. */
     public data class Char(val c: kotlin.Char) : Key()
 
     public data object Enter : Key()
@@ -35,9 +39,9 @@ public sealed class Key {
     public data object Insert : Key()
 
     /**
-     * A function key (F1-F12)
+     * A function key (F1-F12).
      *
-     * @property n the function key number (1-12)
+     * @property n The function key number (1-12).
      */
     public data class F(val n: Int) : Key()
 }

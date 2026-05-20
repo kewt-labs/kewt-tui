@@ -15,14 +15,27 @@
 * */
 package dev.kewt.terminal
 
+/**
+ * Supported color modes for terminal rendering.
+ */
 public enum class ColorMode {
+    /** No color support. */
     NoColor,
+
+    /** Basic 16-color support. */
     Basic,
+
+    /** Extended 256-color support. */
     Extended,
+
+    /** 24-bit TrueColor support. */
     TrueColor,
     ;
 
     public companion object {
+        /**
+         * Detects the color support of the current terminal environment.
+         */
         public fun detect(): ColorMode {
             val colorTerm = getEnv("COLORTERM") ?: ""
             if (colorTerm == "truecolor" || colorTerm == "24bit") return TrueColor
@@ -34,4 +47,7 @@ public enum class ColorMode {
     }
 }
 
+/**
+ * Retrieves the value of an environment variable.
+ */
 internal expect fun getEnv(name: String): String?

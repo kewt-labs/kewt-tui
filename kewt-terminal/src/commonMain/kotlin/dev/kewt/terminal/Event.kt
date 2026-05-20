@@ -15,13 +15,25 @@
 * */
 package dev.kewt.terminal
 
+/**
+ * Base class for all terminal events.
+ */
 public sealed class Event
 
+/**
+ * Represents a keyboard input event.
+ *
+ * @property key The key that was pressed.
+ * @property modifiers The set of modifiers (Shift, Ctrl, Alt) active during the press.
+ */
 public data class KeyEvent(
     val key: Key,
     val modifiers: Set<KeyModifier> = emptySet(),
 ) : Event()
 
+/**
+ * Keyboard modifier keys.
+ */
 public enum class KeyModifier {
     Shift,
     Ctrl,

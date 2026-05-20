@@ -15,14 +15,28 @@
 * */
 package dev.kewt.terminal
 
+/**
+ * A state-machine-based parser for terminal input bytes.
+ *
+ * Converts raw bytes from standard input into high-level [Event] objects.
+ * Handles multibyte ANSI escape sequences for special keys and modifiers.
+ */
 public class InputParser {
     private var buffer = IntArray(1024)
     private var head = 0
     private var tail = 0
     private var size = 0
 
+    /**
+     * Whether there are any bytes currently in the buffer that could form an event.
+     */
     public val hasEvents: Boolean get() = size > 0
 
+    /**
+     * Feeds raw [bytes] into the internal parser buffer.
+     *
+     * @param count The number of bytes to read from the array.
+     */
     public fun feed(bytes: ByteArray, count: Int) {
         ensureCapacity(size + count)
         for (i in 0 until count) {
@@ -32,6 +46,11 @@ public class InputParser {
         }
     }
 
+    /**
+     * Attempts to parse the next event from the internal buffer.
+     *
+     * @return The parsed [Event], or null if no complete event is available.
+     */
     public fun next(): Event? {
         if (size == 0) return null
         return when (val b = peek()) {

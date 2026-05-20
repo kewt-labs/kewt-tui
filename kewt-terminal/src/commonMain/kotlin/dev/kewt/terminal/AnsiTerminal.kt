@@ -22,6 +22,14 @@ import dev.kewt.platform.SignalHandler
 import dev.kewt.platform.Size
 import dev.kewt.platform.TerminalSize
 
+/**
+ * An implementation of [Terminal] that uses ANSI escape sequences.
+ *
+ * This implementation handles raw mode management, cursor control, screen clearing,
+ * and input parsing for standard terminal emulators.
+ *
+ * @property colorMode The [ColorMode] to use for rendering.
+ */
 public class AnsiTerminal(
     public val colorMode: ColorMode = ColorMode.detect(),
 ) : Terminal {
@@ -35,10 +43,12 @@ public class AnsiTerminal(
         SignalHandler.register(PosixSignal.SIGWINCH) {
             cachedSize = TerminalSize.query()
         }
+        // Switch to alternate screen buffer
         write("\u001b[?1049h")
     }
 
     override fun exitRawMode() {
+        // Switch back to primary screen buffer
         write("\u001b[?1049l")
         flush()
         SignalHandler.unregister(PosixSignal.SIGWINCH)
