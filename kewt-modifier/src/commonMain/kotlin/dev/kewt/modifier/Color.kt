@@ -15,15 +15,34 @@
 * */
 package dev.kewt.modifier
 
+/**
+ * Represents a color that can be used for foreground or background styling in a terminal.
+ *
+ * Supports various color formats including standard ANSI 16, ANSI 256, and TrueColor (RGB).
+ */
 public sealed class Color {
+    /** The terminal's default color. */
     public data object Default : Color()
 
+    /**
+     * A TrueColor representation using 8-bit red, green, and blue components.
+     */
     public data class RGB(val r: Int, val g: Int, val b: Int) : Color() {
         public constructor(hex: Int) : this((hex shr 16) and 0xFF, (hex shr 8) and 0xFF, hex and 0xFF)
     }
 
+    /**
+     * A standard ANSI 16 color.
+     *
+     * @property code The color code (0-15).
+     */
     public data class Ansi16(val code: Int) : Color()
 
+    /**
+     * An extended ANSI 256 color.
+     *
+     * @property code The color code (0-255).
+     */
     public data class Ansi256(val code: Int) : Color()
 
     public companion object {
@@ -44,12 +63,14 @@ public sealed class Color {
         public val BrightCyan: Color = Ansi16(14)
         public val BrightWhite: Color = Ansi16(15)
 
+        /** Creates a [Color.RGB] instance from a hex value. */
         public fun rgb(hex: Int): Color = RGB(hex)
 
+        /** Creates a [Color.RGB] instance from individual R, G, and B components. */
         public fun rgb(r: Int, g: Int, b: Int): Color = RGB(r, g, b)
 
         /**
-         * Packs a Color into a primitive Int for efficient storage.
+         * Packs a Color into a primitive Int for internal storage.
          */
         public fun pack(color: Color): Int = when (color) {
             Default -> 0
@@ -65,7 +86,7 @@ public sealed class Color {
         }
 
         /**
-         * Unpacks a Color from a primitive Int.
+         * Unpacks a Color from a packed primitive Int.
          */
         public fun unpack(packed: Int): Color = when {
             packed == 0 -> Default

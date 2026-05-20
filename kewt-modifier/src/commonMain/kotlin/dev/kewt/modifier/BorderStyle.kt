@@ -15,6 +15,9 @@
 * */
 package dev.kewt.modifier
 
+/**
+ * Defines the characters used to draw borders around UI components.
+ */
 public data class BorderStyle(
     val topLeft: Char,
     val topRight: Char,
@@ -24,10 +27,19 @@ public data class BorderStyle(
     val vertical: Char,
 ) {
     public companion object {
+        /** A simple border style using space, dash, and pipe characters. */
         public val Plain: BorderStyle = BorderStyle(' ', ' ', ' ', ' ', '-', '|')
+
+        /** A border style using rounded Unicode box-drawing characters. */
         public val Rounded: BorderStyle = BorderStyle('╭', '╮', '╰', '╯', '─', '│')
+
+        /** A border style using double-line Unicode box-drawing characters. */
         public val Double: BorderStyle = BorderStyle('╔', '╗', '╚', '╝', '═', '║')
+
+        /** A border style using heavy (thick) Unicode box-drawing characters. */
         public val Heavy: BorderStyle = BorderStyle('┏', '┓', '┗', '┛', '━', '┃')
+
+        /** A border style using light (thin) Unicode box-drawing characters. */
         public val Light: BorderStyle = BorderStyle('┌', '┐', '└', '┘', '─', '│')
     }
 }
