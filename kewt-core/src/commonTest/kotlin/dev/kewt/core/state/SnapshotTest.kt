@@ -48,11 +48,16 @@ class SnapshotTest {
             }
         val state = mutableStateOf(0)
 
-        // Read outside observe
-        state.value
+        // 1. The first change is tracked normally
+        Snapshot.observe(scope) { state.value }
         state.value = 1
+        assertEquals(1, dirtyCount, "Should track the first change")
 
-        assertEquals(0, dirtyCount)
+        // 2. Read outside observe should NOT track
+        state.value
+        state.value = 2
+
+        assertEquals(1, dirtyCount, "Should NOT have tracked the second change (read outside scope)")
     }
 
     @Test
@@ -70,5 +75,41 @@ class SnapshotTest {
         state.value = 5 // same value
 
         assertEquals(0, dirtyCount)
+    }
+
+    @Test
+    fun observerIsRemovedAfterNotification() {
+        var dirtyCount = 0
+        val scope =
+            object : Scope {
+                override fun markDirty() {
+                    dirtyCount++
+                }
+            }
+        val state = mutableStateOf(0)
+
+        Snapshot.observe(scope) { state.value }
+        state.value = 1 // First change triggers notification and removal
+        state.value = 2 // Second change should NOT trigger notification
+
+        assertEquals(1, dirtyCount, "Should only have been notified once because observer was removed")
+    }
+
+    @Test
+    fun manualRemoveScopePreventsNotification() {
+        var dirtyCount = 0
+        val scope =
+            object : Scope {
+                override fun markDirty() {
+                    dirtyCount++
+                }
+            }
+        val state = mutableStateOf(0)
+
+        Snapshot.observe(scope) { state.value }
+        Snapshot.removeScope(scope)
+        state.value = 1
+
+        assertEquals(0, dirtyCount, "Scope should not be notified after being manually removed")
     }
 }
