@@ -16,7 +16,7 @@
 package dev.kewt.terminal
 
 public sealed class Key {
-    public data class Char(val char: kotlin.Char) : Key()
+    public data class Char(val c: kotlin.Char) : Key()
 
     public data object Enter : Key()
     public data object Escape : Key()
