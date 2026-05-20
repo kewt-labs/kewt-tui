@@ -53,7 +53,7 @@ public object Snapshot {
      * memory leaks. They will re-register themselves during their next execution.
      */
     internal fun notifyWrite(state: State<*>) {
-        var impactedScopes: Set<Scope>? = null
+        var impactedScopes: Set<Scope>?
 
         while (true) {
             val old = observers.value
@@ -64,7 +64,7 @@ public object Snapshot {
             if (observers.compareAndSet(old, new)) break
         }
 
-        impactedScopes?.forEach { it.markDirty() }
+        impactedScopes.forEach { it.markDirty() }
     }
 
     /**
