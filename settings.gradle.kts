@@ -38,6 +38,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "kewt"
 
 include(
+    ":kewt-bom",
     ":kewt-core",
     ":kewt-modifier",
     ":kewt-platform",
