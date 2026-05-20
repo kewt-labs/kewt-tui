@@ -17,7 +17,7 @@ package dev.kewt.core.buffer
 
 import dev.kewt.modifier.Color
 
-public class Cell(
+public data class Cell(
     public var char: Char = ' ',
     public var foreground: Color = Color.Default,
     public var background: Color = Color.Default,
@@ -34,16 +34,6 @@ public class Cell(
         italic = false
         underline = false
         strikethrough = false
-    }
-
-    public fun copyFrom(other: Cell) {
-        char = other.char
-        foreground = other.foreground
-        background = other.background
-        bold = other.bold
-        italic = other.italic
-        underline = other.underline
-        strikethrough = other.strikethrough
     }
 
     public fun sameAs(other: Cell): Boolean =
