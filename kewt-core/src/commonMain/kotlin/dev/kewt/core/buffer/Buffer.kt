@@ -58,47 +58,53 @@ public class Buffer(
 
     /**
      * Sets the character and styles for a specific cell.
+     *
+     * Providing null for any style parameter will preserve the existing value in that cell.
      */
     public fun setChar(
         x: Int,
         y: Int,
-        char: Char,
-        foreground: Color = Color.Default,
-        background: Color = Color.Default,
-        bold: Boolean = false,
-        italic: Boolean = false,
-        underline: Boolean = false,
-        strikethrough: Boolean = false,
+        char: Char? = null,
+        foreground: Color? = null,
+        background: Color? = null,
+        bold: Boolean? = null,
+        italic: Boolean? = null,
+        underline: Boolean? = null,
+        strikethrough: Boolean? = null,
     ) {
         if (x !in 0..<width || y !in 0..<height) return
         val i = y * width + x
-        chars[i] = char
-        fgColors[i] = Color.pack(foreground)
-        bgColors[i] = Color.pack(background)
 
-        var f = 0
-        if (bold) f = f or 1
-        if (italic) f = f or 2
-        if (underline) f = f or 4
-        if (strikethrough) f = f or 8
-        flags[i] = f.toByte()
+        if (char != null) chars[i] = char
+        if (foreground != null) fgColors[i] = Color.pack(foreground)
+        if (background != null) bgColors[i] = Color.pack(background)
+
+        if (bold != null || italic != null || underline != null || strikethrough != null) {
+            var f = flags[i].toInt()
+            if (bold != null) f = if (bold) f or 1 else f and 1.inv()
+            if (italic != null) f = if (italic) f or 2 else f and 2.inv()
+            if (underline != null) f = if (underline) f or 4 else f and 4.inv()
+            if (strikethrough != null) f = if (strikethrough) f or 8 else f and 8.inv()
+            flags[i] = f.toByte()
+        }
     }
 
     /**
      * Writes a string into the buffer at the specified coordinates.
      *
      * Text that exceeds the buffer width will be truncated.
+     * Providing null for any style parameter will preserve the existing value in those cells.
      */
     public fun writeString(
         x: Int,
         y: Int,
         text: String,
-        foreground: Color = Color.Default,
-        background: Color = Color.Default,
-        bold: Boolean = false,
-        italic: Boolean = false,
-        underline: Boolean = false,
-        strikethrough: Boolean = false,
+        foreground: Color? = null,
+        background: Color? = null,
+        bold: Boolean? = null,
+        italic: Boolean? = null,
+        underline: Boolean? = null,
+        strikethrough: Boolean? = null,
     ) {
         if (y !in 0..<height) return
         var cx = x
