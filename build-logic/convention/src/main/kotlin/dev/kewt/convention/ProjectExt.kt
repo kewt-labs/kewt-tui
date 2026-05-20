@@ -20,11 +20,23 @@ import org.gradle.api.artifacts.VersionCatalog
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.getByType
 
+/**
+ * Accessor for the project's version catalog.
+ */
 internal val Project.libs
     get(): VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
+/**
+ * Finds a library in the version catalog.
+ */
 fun VersionCatalog.library(alias: String) = findLibrary(alias).get()
 
+/**
+ * Finds a version in the version catalog.
+ */
 fun VersionCatalog.version(alias: String) = findVersion(alias).get().requiredVersion
 
+/**
+ * Finds a bundle in the version catalog.
+ */
 fun VersionCatalog.bundles(alias: String) = findBundle(alias).get()

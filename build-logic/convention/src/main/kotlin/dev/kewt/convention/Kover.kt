@@ -19,6 +19,11 @@ import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
+/**
+ * Configures Kover test coverage for the project.
+ *
+ * Sets up coverage filters, minimum bounds (85%), and report generation paths.
+ */
 internal fun Project.configureKover() =
     extensions.configure<KoverProjectExtension> {
         reports {

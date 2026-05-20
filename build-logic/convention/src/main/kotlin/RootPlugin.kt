@@ -20,6 +20,12 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.jetbrains.dokka.gradle.DokkaExtension
 
+/**
+ * A convention plugin for the root project.
+ *
+ * Configures aggregate tasks like 'allTests' and project-wide tools
+ * like Dokka HTML aggregation and Spotless for build scripts.
+ */
 abstract class RootPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {

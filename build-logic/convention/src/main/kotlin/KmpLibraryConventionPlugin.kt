@@ -20,6 +20,12 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
+/**
+ * A convention plugin that configures a Kotlin Multiplatform library.
+ *
+ * This plugin sets up standard targets (Linux, macOS), explicit API mode,
+ * and common compiler options for all KMP modules in the project.
+ */
 class KmpLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) =
         with(target) {

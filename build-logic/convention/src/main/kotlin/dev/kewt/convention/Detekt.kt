@@ -22,6 +22,11 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withType
 
+/**
+ * Configures Detekt for the project.
+ *
+ * Sets up the configuration file, baseline, and custom rule sets.
+ */
 internal fun Project.configureDetekt() {
     extensions.configure<DetektExtension> {
         buildUponDefaultConfig.set(true)

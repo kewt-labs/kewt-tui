@@ -24,6 +24,13 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.withType
 
+/**
+ * A convention plugin that configures quality assurance tools.
+ *
+ * This includes Detekt for static analysis, Dokka for documentation,
+ * Kover for test coverage, and Spotless for code formatting.
+ * It also registers a aggregate 'qualityCheck' task.
+ */
 class QualityConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {

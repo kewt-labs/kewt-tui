@@ -20,6 +20,11 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
 
+/**
+ * Configures Spotless for the root project.
+ *
+ * Handles formatting for build scripts and configuration files.
+ */
 internal fun Project.configureSpotlessForRootProject() {
     apply(plugin = "com.diffplug.spotless")
     extensions.configure<SpotlessExtension> {
@@ -38,6 +43,11 @@ internal fun Project.configureSpotlessForRootProject() {
     }
 }
 
+/**
+ * Configures common Spotless settings for subprojects.
+ *
+ * Sets up ktlint formatting and license header enforcement for all Kotlin source files.
+ */
 internal fun Project.configureSpotlessCommon() {
     extensions.configure<SpotlessExtension> {
         kotlin {

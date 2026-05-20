@@ -20,6 +20,11 @@ import org.gradle.kotlin.dsl.configure
 import org.jetbrains.dokka.gradle.DokkaExtension
 import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 
+/**
+ * Configures Dokka documentation generation for the project.
+ *
+ * Sets up source links to GitHub, external documentation links, and visibility modifiers.
+ */
 internal fun Project.configureDokka() {
     extensions.configure<DokkaExtension> {
         dokkaSourceSets.configureEach {
