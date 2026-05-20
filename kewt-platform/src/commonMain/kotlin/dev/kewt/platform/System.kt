@@ -15,8 +15,15 @@
 * */
 package dev.kewt.platform
 
-import kotlin.time.TimeSource
+/**
+ * Returns the current system time in milliseconds.
+ */
+public expect fun currentTimeMs(): Long
 
-private val startMark = TimeSource.Monotonic.markNow()
-
-public actual fun currentTimeMs(): Long = startMark.elapsedNow().inWholeMilliseconds
+/**
+ * Retrieves the value of an environment variable.
+ *
+ * @param name The name of the environment variable.
+ * @return The value of the variable, or null if it is not defined.
+ */
+public expect fun getEnv(name: String): String?

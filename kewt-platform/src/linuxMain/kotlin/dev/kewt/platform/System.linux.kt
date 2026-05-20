@@ -15,7 +15,19 @@
 * */
 package dev.kewt.platform
 
-/**
- * Returns the current system time in milliseconds.
- */
-public expect fun currentTimeMs(): Long
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import platform.posix.gettimeofday
+import platform.posix.timeval
+
+@OptIn(ExperimentalForeignApi::class)
+internal actual fun currentTimeMsInternal(): Long {
+    memScoped {
+        val tv = alloc<timeval>()
+        gettimeofday(tv.ptr, null)
+        return tv.tv_sec.convert<Long>() * 1000L + tv.tv_usec.convert<Long>() / 1000L
+    }
+}

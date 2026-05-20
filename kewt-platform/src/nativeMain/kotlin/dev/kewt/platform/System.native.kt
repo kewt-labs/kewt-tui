@@ -13,11 +13,16 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
-package dev.kewt.terminal
+package dev.kewt.platform
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 import platform.posix.getenv
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual fun getEnv(name: String): String? = getenv(name)?.toKString()
+public actual fun currentTimeMs(): Long = currentTimeMsInternal()
+
+@OptIn(ExperimentalForeignApi::class)
+public actual fun getEnv(name: String): String? = getenv(name)?.toKString()
+
+internal expect fun currentTimeMsInternal(): Long

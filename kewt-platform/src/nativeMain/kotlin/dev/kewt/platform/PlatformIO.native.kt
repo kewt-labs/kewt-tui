@@ -20,10 +20,11 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
 import platform.posix.STDIN_FILENO
+import platform.posix.STDOUT_FILENO
 import platform.posix.fflush
-import platform.posix.fputs
 import platform.posix.read
 import platform.posix.stdout
+import platform.posix.write
 
 @OptIn(ExperimentalForeignApi::class)
 public actual object PlatformIO {
@@ -34,7 +35,10 @@ public actual object PlatformIO {
     }
 
     public actual fun writeString(text: String) {
-        fputs(text, stdout)
+        val bytes = text.encodeToByteArray()
+        bytes.usePinned { pinned ->
+            write(STDOUT_FILENO, pinned.addressOf(0), bytes.size.convert())
+        }
     }
 
     public actual fun flush() {

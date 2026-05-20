@@ -15,6 +15,8 @@
 * */
 package dev.kewt.terminal
 
+import dev.kewt.platform.getEnv
+
 /**
  * Supported color modes for terminal rendering.
  */
@@ -46,8 +48,3 @@ public enum class ColorMode {
         }
     }
 }
-
-/**
- * Retrieves the value of an environment variable.
- */
-internal expect fun getEnv(name: String): String?
