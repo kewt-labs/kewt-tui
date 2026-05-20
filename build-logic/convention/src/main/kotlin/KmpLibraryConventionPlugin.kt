@@ -13,6 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 * */
+import dev.kewt.convention.configureTarget
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.AbstractTestTask
@@ -32,11 +33,7 @@ class KmpLibraryConventionPlugin : Plugin<Project> {
             pluginManager.apply("org.jetbrains.kotlin.multiplatform")
 
             configure<KotlinMultiplatformExtension> {
-                applyDefaultHierarchyTemplate()
-                explicitApi()
-                linuxX64()
-                linuxArm64()
-                macosArm64()
+                configureTarget()
 
                 sourceSets.apply {
                     commonTest.dependencies {

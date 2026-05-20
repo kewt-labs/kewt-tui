@@ -21,6 +21,12 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
+/**
+ * A convention plugin that configures an example application.
+ *
+ * This plugin sets up standard native targets and automatically configures
+ * a binary executable with the default 'main' entry point.
+ */
 class KewtExampleApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) =
         with(target) {
@@ -30,11 +36,9 @@ class KewtExampleApplicationConventionPlugin : Plugin<Project> {
                 configureTarget()
 
                 targets.withType<KotlinNativeTarget> {
-                    if (project.name.startsWith("examples")) {
-                        binaries {
-                            executable {
-                                entryPoint = "main"
-                            }
+                    binaries {
+                        executable {
+                            entryPoint = "main"
                         }
                     }
                 }

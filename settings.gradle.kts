@@ -46,3 +46,8 @@ include(
     ":kewt-test",
     ":kewt-ui",
 )
+
+// Sample Apps
+include(
+    ":examples:counter"
+)
