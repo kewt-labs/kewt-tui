@@ -40,7 +40,9 @@ abstract class RootPlugin : Plugin<Project> {
 
             dependencies {
                 subprojects.forEach { subproject ->
-                    "dokka"(subproject)
+                    if (subproject.path.startsWith(":kewt-")) {
+                        "dokka"(subproject)
+                    }
                 }
             }
 
