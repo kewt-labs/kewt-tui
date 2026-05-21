@@ -8,7 +8,7 @@ Kewt is an experimental Kotlin TUI (Terminal User Interface) Framework for Kotli
 ## Documentation
 
 The full API documentation is available at:
-**[https://kewt-labs.github.io/kewt/](https://kewt-labs.github.io/kewt/)**
+**[https://kewt-labs.github.io/kewt-tui/](https://kewt-labs.github.io/kewt-tui/)**
 
 ## Key Concepts
 
