@@ -57,14 +57,13 @@ class QualityConventionPlugin : Plugin<Project> {
 
             tasks.register("qualityCheck") {
                 group = "verification"
-                description = "Runs all quality checks (tests, coverage, lint, detekt, docs)"
+                description = "Runs all quality checks (tests, coverage, lint, detekt)"
 
                 dependsOn(
                     tasks.named("allTests"),
                     tasks.named("koverVerify"),
                     tasks.named("spotlessCheck"),
                     tasks.named("detekt"),
-                    tasks.named("dokkaGeneratePublicationHtml"),
                 )
             }
         }
