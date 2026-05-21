@@ -19,7 +19,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
-import platform.posix.STDOUT_FILENO
 import platform.posix.TIOCGWINSZ
 import platform.posix.ioctl
 import platform.posix.winsize
@@ -27,10 +26,15 @@ import platform.posix.winsize
 @OptIn(ExperimentalForeignApi::class)
 public actual object TerminalSize {
     public actual fun query(): Size {
+        val fd = findTtyFd()
+        if (fd < 0) return Size(80, 24)
+
         memScoped {
             val ws = alloc<winsize>()
-            ioctl(STDOUT_FILENO, TIOCGWINSZ.toULong(), ws.ptr)
-            return Size(ws.ws_col.toInt(), ws.ws_row.toInt())
+            if (ioctl(fd, TIOCGWINSZ.toULong(), ws.ptr) == 0) {
+                return Size(ws.ws_col.toInt(), ws.ws_row.toInt())
+            }
+            return Size(80, 24)
         }
     }
 }

@@ -19,8 +19,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
-import platform.posix.STDIN_FILENO
-import platform.posix.STDOUT_FILENO
 import platform.posix.fflush
 import platform.posix.read
 import platform.posix.stdout
@@ -29,15 +27,21 @@ import platform.posix.write
 @OptIn(ExperimentalForeignApi::class)
 public actual object PlatformIO {
     public actual fun readBytes(buffer: ByteArray, maxLen: Int): Int {
+        val fd = findTtyFd()
+        if (fd < 0) return 0
+
         buffer.usePinned { pinned ->
-            return read(STDIN_FILENO, pinned.addressOf(0), maxLen.convert()).toInt()
+            return read(fd, pinned.addressOf(0), maxLen.convert()).toInt()
         }
     }
 
     public actual fun writeString(text: String) {
+        val fd = findTtyFd()
+        if (fd < 0) return
+
         val bytes = text.encodeToByteArray()
         bytes.usePinned { pinned ->
-            write(STDOUT_FILENO, pinned.addressOf(0), bytes.size.convert())
+            write(fd, pinned.addressOf(0), bytes.size.convert())
         }
     }
 

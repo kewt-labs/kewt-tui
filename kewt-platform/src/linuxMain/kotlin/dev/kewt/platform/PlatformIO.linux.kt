@@ -21,15 +21,17 @@ import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import platform.posix.POLLIN
-import platform.posix.STDIN_FILENO
 import platform.posix.poll
 import platform.posix.pollfd
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual fun awaitInputInternal(timeoutMs: Int): Boolean {
+    val fd = findTtyFd()
+    if (fd < 0) return false
+
     memScoped {
         val pfd = alloc<pollfd>()
-        pfd.fd = STDIN_FILENO
+        pfd.fd = fd
         pfd.events = POLLIN.convert()
         return poll(pfd.ptr, 1.convert(), timeoutMs.convert()) > 0
     }

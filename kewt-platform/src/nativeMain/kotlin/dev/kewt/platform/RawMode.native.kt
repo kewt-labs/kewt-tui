@@ -26,7 +26,6 @@ import kotlinx.cinterop.usePinned
 import platform.posix.F_GETFL
 import platform.posix.F_SETFL
 import platform.posix.O_NONBLOCK
-import platform.posix.STDIN_FILENO
 import platform.posix.TCSAFLUSH
 import platform.posix.cfmakeraw
 import platform.posix.fcntl
@@ -43,8 +42,11 @@ public actual object RawMode {
 
     public actual fun enter() {
         memScoped {
+            val fd = findTtyFd()
+            if (fd < 0) return
+
             val term = alloc<termios>()
-            if (tcgetattr(STDIN_FILENO, term.ptr) == 0) {
+            if (tcgetattr(fd, term.ptr) == 0) {
                 // Manually copy the memory to our buffer to save the state
                 original.usePinned { pinned ->
                     memcpy(pinned.addressOf(0), term.ptr, sizeOf<termios>().convert())
@@ -52,13 +54,13 @@ public actual object RawMode {
                 saved = true
 
                 val raw = alloc<termios>()
-                tcgetattr(STDIN_FILENO, raw.ptr)
+                tcgetattr(fd, raw.ptr)
                 cfmakeraw(raw.ptr)
-                tcsetattr(STDIN_FILENO, TCSAFLUSH, raw.ptr)
+                tcsetattr(fd, TCSAFLUSH, raw.ptr)
 
                 // Set stdin to non-blocking so read() returns immediately
-                originalFlags = fcntl(STDIN_FILENO, F_GETFL)
-                fcntl(STDIN_FILENO, F_SETFL, originalFlags or O_NONBLOCK)
+                originalFlags = fcntl(fd, F_GETFL)
+                fcntl(fd, F_SETFL, originalFlags or O_NONBLOCK)
             }
         }
     }
@@ -66,15 +68,19 @@ public actual object RawMode {
     public actual fun exit() {
         if (saved) {
             memScoped {
+                val fd = findTtyFd()
+                if (fd < 0) return
+
                 // Restore blocking mode
-                fcntl(STDIN_FILENO, F_SETFL, originalFlags)
+                fcntl(fd, F_SETFL, originalFlags)
 
                 // Reconstruct termios from our buffer
                 val term = alloc<termios>()
                 original.usePinned { pinned ->
                     memcpy(term.ptr, pinned.addressOf(0), sizeOf<termios>().convert())
                 }
-                tcsetattr(STDIN_FILENO, TCSAFLUSH, term.ptr)
+                tcsetattr(fd, TCSAFLUSH, term.ptr)
+
                 saved = false
             }
         }
