@@ -34,6 +34,7 @@ class KmpLibraryConventionPlugin : Plugin<Project> {
 
             configure<KotlinMultiplatformExtension> {
                 configureTarget()
+                explicitApi()
 
                 sourceSets.apply {
                     commonTest.dependencies {
