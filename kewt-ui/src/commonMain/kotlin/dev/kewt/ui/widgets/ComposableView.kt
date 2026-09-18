@@ -18,16 +18,25 @@ package dev.kewt.ui.widgets
 import dev.kewt.core.KewtApp
 import dev.kewt.core.buffer.Buffer
 import dev.kewt.modifier.Modifier
+import dev.kewt.modifier.Style
+import dev.kewt.platform.currentTimeMs
 import dev.kewt.ui.layout.Constraints
 import dev.kewt.ui.layout.LayoutType
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val VIEW_SCOPE_KEY = "dev.kewt.ui.ViewScope"
+
+private val animationTickInterval = 50.milliseconds
 
 /**
  * Sets the high-level UI content for the application.
  *
  * This function initializes a persistent [ViewScope] that manages component state
- * and memoization across render passes.
+ * and memoization across render passes. It also installs:
+ * - an animation ticker that drives widgets like [Spinner] (only active while an
+ *   animating widget is present), and
+ * - a key interceptor that routes input through the [FocusManager] when
+ *   [rememberFocusManager] is used.
  *
  * @param content A lambda that defines the UI hierarchy.
  */
@@ -36,7 +45,15 @@ public fun KewtApp.setContent(content: ViewScope.() -> Unit) {
     @Suppress("UNCHECKED_CAST")
     val persistentScope = attributes.getOrPut(VIEW_SCOPE_KEY) { ViewScope() } as ViewScope
 
+    every(animationTickInterval) {
+        if (persistentScope.animationRequested) {
+            persistentScope.tick.value = currentTimeMs()
+        }
+    }
+    setKeyInterceptor { event -> persistentScope.dispatchKeyEvent(event) }
+
     view {
+        persistentScope.animationRequested = false
         persistentScope.children.clear()
         persistentScope.content()
         renderViewScope(this, persistentScope)
@@ -46,13 +63,16 @@ public fun KewtApp.setContent(content: ViewScope.() -> Unit) {
 /**
  * Internal renderer that converts a [ViewScope] hierarchy into buffer characters.
  */
-internal fun renderViewScope(buffer: Buffer, scope: ViewScope) {
+internal fun renderViewScope(
+    buffer: Buffer,
+    scope: ViewScope,
+) {
     val rootNode = ContainerViewNode(LayoutType.Column, Modifier, scope.children)
     val layoutRoot = rootNode.toLayoutNode()
 
-    layoutRoot.measure(Constraints(maxWidth = buffer.width, maxHeight = Int.MAX_VALUE))
+    layoutRoot.measure(Constraints(maxWidth = buffer.width, maxHeight = buffer.height))
 
     // Starting from top-left (0,0)
     layoutRoot.place(0, 0)
-    rootNode.paint(buffer, layoutRoot)
+    rootNode.paint(buffer, layoutRoot, Style.Empty)
 }

@@ -31,11 +31,13 @@ import dev.kewt.platform.TerminalSize
  * @property colorMode The [ColorMode] to use for rendering.
  */
 public class AnsiTerminal(
-    public val colorMode: ColorMode = ColorMode.detect(),
+    override val colorMode: ColorMode = ColorMode.detect(),
 ) : Terminal {
     private val parser = InputParser()
     private val readBuf = ByteArray(256)
     private var cachedSize = Size(80, 24)
+    private var mouseEnabled = false
+    private var pasteEnabled = false
 
     override fun enterRawMode() {
         RawMode.enter()
@@ -48,6 +50,9 @@ public class AnsiTerminal(
     }
 
     override fun exitRawMode() {
+        // Restore any capture modes before leaving the alternate screen
+        if (mouseEnabled) disableMouseCapture()
+        if (pasteEnabled) disablePasteCapture()
         // Switch back to primary screen buffer
         write("\u001b[?1049l")
         flush()
@@ -56,6 +61,31 @@ public class AnsiTerminal(
     }
 
     override fun size(): Size = cachedSize
+
+    override fun enableMouseCapture() {
+        // Normal tracking + button-event tracking + any-event tracking + SGR extended coordinates
+        write("\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1006h")
+        flush()
+        mouseEnabled = true
+    }
+
+    override fun disableMouseCapture() {
+        write("\u001b[?1006l\u001b[?1003l\u001b[?1002l\u001b[?1000l")
+        flush()
+        mouseEnabled = false
+    }
+
+    override fun enablePasteCapture() {
+        write("\u001b[?2004h")
+        flush()
+        pasteEnabled = true
+    }
+
+    override fun disablePasteCapture() {
+        write("\u001b[?2004l")
+        flush()
+        pasteEnabled = false
+    }
 
     override fun poll(timeoutMs: Int): Boolean {
         if (parser.hasEvents) return true
@@ -79,7 +109,10 @@ public class AnsiTerminal(
         PlatformIO.flush()
     }
 
-    override fun moveCursor(x: Int, y: Int) {
+    override fun moveCursor(
+        x: Int,
+        y: Int,
+    ) {
         write("\u001b[${y + 1};${x + 1}H")
     }
 

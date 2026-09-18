@@ -23,9 +23,14 @@ import kotlin.concurrent.AtomicReference
  *
  * Snapshot tracks which [Scope]s read which [State] objects and ensures that
  * when a state changes, all dependent scopes are notified.
+ *
+ * Reads performed inside [observe] are collected into a per-invocation set and
+ * merged into the observer map with a single atomic update when the block finishes,
+ * which keeps rendering hot paths allocation-light.
  */
 public object Snapshot {
     internal var currentScope: Scope? = null
+    internal var currentCollector: MutableSet<State<*>>? = null
 
     // Use thread-safe map storage with Copy-on-Write pattern for multithreaded safety
     private val observers = AtomicReference<Map<State<*>, Set<Scope>>>(emptyMap())
@@ -36,14 +41,12 @@ public object Snapshot {
     internal fun onRead(state: State<*>) {
         val scope = currentScope ?: return
 
-        while (true) {
-            val old = observers.value
-            val currentSet = old[state] ?: emptySet()
-            if (scope in currentSet) return
-
-            val new = old + (state to (currentSet + scope))
-            if (observers.compareAndSet(old, new)) break
+        val collector = currentCollector
+        if (collector != null) {
+            collector.add(state)
+            return
         }
+        addObserver(scope, state)
     }
 
     /**
@@ -87,12 +90,50 @@ public object Snapshot {
         scope: Scope,
         block: () -> T,
     ): T {
-        val previous = currentScope
+        val previousScope = currentScope
+        val previousCollector = currentCollector
+        val collector = mutableSetOf<State<*>>()
         currentScope = scope
+        currentCollector = collector
         try {
             return block()
         } finally {
-            currentScope = previous
+            currentScope = previousScope
+            currentCollector = previousCollector
+            registerAll(scope, collector)
+        }
+    }
+
+    /**
+     * Merges every state read by [scope] during an observation window into the
+     * observer map with a single compare-and-set.
+     */
+    internal fun registerAll(
+        scope: Scope,
+        states: Set<State<*>>,
+    ) {
+        if (states.isEmpty()) return
+        while (true) {
+            val old = observers.value
+            val new = old.toMutableMap()
+            states.forEach { state ->
+                new[state] = (old[state] ?: emptySet()) + scope
+            }
+            if (observers.compareAndSet(old, new)) break
+        }
+    }
+
+    private fun addObserver(
+        scope: Scope,
+        state: State<*>,
+    ) {
+        while (true) {
+            val old = observers.value
+            val currentSet = old[state] ?: emptySet()
+            if (scope in currentSet) return
+
+            val new = old + (state to (currentSet + scope))
+            if (observers.compareAndSet(old, new)) break
         }
     }
 }

@@ -138,12 +138,37 @@ public data object UnderlineModifier : Modifier.Element
 /** An element that applies strikethrough styling. */
 public data object StrikethroughModifier : Modifier.Element
 
+/** An element that applies dim (faint) styling. */
+public data object DimModifier : Modifier.Element
+
+/** An element that applies blinking styling. */
+public data object BlinkModifier : Modifier.Element
+
+/** An element that swaps the foreground and background colors. */
+public data object ReverseModifier : Modifier.Element
+
+/** An element that hides the text (the cells still occupy space). */
+public data object HiddenModifier : Modifier.Element
+
+/**
+ * An element that applies a whole [Style] bundle at once.
+ */
+public data class StyleModifier(val style: Style) : Modifier.Element
+
 /**
  * An element that adds a border around a component.
+ *
+ * @property style The characters used to draw the border.
+ * @property color The color of the border characters. [Color.Default] inherits the
+ *   resolved foreground color of the component.
+ * @property title Optional text embedded into the top edge of the border.
+ * @property titleAlignment Horizontal placement of the [title] within the top edge.
  */
 public data class BorderModifier(
     val style: BorderStyle,
     val color: Color = Color.Default,
+    val title: String? = null,
+    val titleAlignment: HorizontalAlignment = HorizontalAlignment.Left,
 ) : Modifier.Element
 
 /** Sets the foreground [color]. */
@@ -164,11 +189,40 @@ public fun Modifier.underline(): Modifier = then(UnderlineModifier)
 /** Applies strikethrough styling. */
 public fun Modifier.strikethrough(): Modifier = then(StrikethroughModifier)
 
+/** Applies dim (faint) styling. */
+public fun Modifier.dim(): Modifier = then(DimModifier)
+
+/** Applies blinking styling. */
+public fun Modifier.blink(): Modifier = then(BlinkModifier)
+
+/** Swaps the foreground and background colors. */
+public fun Modifier.reverse(): Modifier = then(ReverseModifier)
+
+/** Hides the text (the cells still occupy space). */
+public fun Modifier.hidden(): Modifier = then(HiddenModifier)
+
+/** Applies a whole [Style] bundle at once. */
+public fun Modifier.style(style: Style): Modifier = then(StyleModifier(style))
+
 /** Adds a border with the specified [style] and [color]. */
 public fun Modifier.border(
     style: BorderStyle,
     color: Color = Color.Default,
 ): Modifier = then(BorderModifier(style, color))
+
+/** Adds a border with the specified [style], [color], and an embedded [title]. */
+public fun Modifier.border(
+    style: BorderStyle,
+    color: Color = Color.Default,
+    title: String?,
+    titleAlignment: HorizontalAlignment = HorizontalAlignment.Left,
+): Modifier = then(BorderModifier(style, color, title, titleAlignment))
+
+/** Constrains the width to [width] and the height to [height]. */
+public fun Modifier.size(
+    width: Int,
+    height: Int,
+): Modifier = then(WidthModifier(width)).then(HeightModifier(height))
 
 /** Possible horizontal alignment options. */
 public enum class HorizontalAlignment { Left, Center, Right }

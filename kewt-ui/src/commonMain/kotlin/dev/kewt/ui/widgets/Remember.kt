@@ -24,12 +24,19 @@ private object Unset
  * Remembers a value computed by [calculation].
  *
  * The value is stored in the [ViewScope] cache and will be reused across re-renders
- * as long as the key remains the same.
+ * as long as the key remains the same. Null values are cached like any other value.
  */
-@Suppress("UNCHECKED_CAST")
-public fun <T> ViewScope.remember(key: String, calculation: () -> T): T {
-    val value = cache.getOrPut(key) { calculation() }
-    return value as T
+public fun <T> ViewScope.remember(
+    key: String,
+    calculation: () -> T,
+): T {
+    if (cache.containsKey(key)) {
+        @Suppress("UNCHECKED_CAST")
+        return cache[key] as T
+    }
+    val value = calculation()
+    cache[key] = value
+    return value
 }
 
 /**
@@ -39,12 +46,16 @@ public fun <T> ViewScope.remember(key: String, calculation: () -> T): T {
  * @param input A dependency that triggers recomputation when its value changes.
  * @param calculation The logic to produce the value.
  */
-@Suppress("UNCHECKED_CAST")
-public fun <T> ViewScope.remember(key: String, input: Any?, calculation: () -> T): T {
+public fun <T> ViewScope.remember(
+    key: String,
+    input: Any?,
+    calculation: () -> T,
+): T {
     val inputKey = "${key}__input"
-    val prevInput = cache.getLastInput(inputKey)
+    val prevInput = if (cache.containsKey(inputKey)) cache[inputKey] else Unset
 
-    return if (prevInput != Unset && prevInput == input) {
+    return if (prevInput != Unset && prevInput == input && cache.containsKey(key)) {
+        @Suppress("UNCHECKED_CAST")
         cache[key] as T
     } else {
         val value = calculation()
@@ -52,11 +63,4 @@ public fun <T> ViewScope.remember(key: String, input: Any?, calculation: () -> T
         cache[inputKey] = input
         value
     }
-}
-
-/**
- * Internal helper to retrieve the last stored input, handling nulls correctly via [Unset].
- */
-private fun MutableMap<String, Any?>.getLastInput(key: String): Any? {
-    return if (containsKey(key)) get(key) else Unset
 }

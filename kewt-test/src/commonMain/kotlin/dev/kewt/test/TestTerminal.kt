@@ -16,10 +16,16 @@
 package dev.kewt.test
 
 import dev.kewt.platform.Size
+import dev.kewt.terminal.ColorMode
 import dev.kewt.terminal.Event
+import dev.kewt.terminal.FocusEvent
 import dev.kewt.terminal.Key
 import dev.kewt.terminal.KeyEvent
 import dev.kewt.terminal.KeyModifier
+import dev.kewt.terminal.MouseButton
+import dev.kewt.terminal.MouseEvent
+import dev.kewt.terminal.MouseKind
+import dev.kewt.terminal.PasteEvent
 import dev.kewt.terminal.Terminal
 
 /**
@@ -30,10 +36,12 @@ import dev.kewt.terminal.Terminal
  *
  * @param width The initial width of the terminal.
  * @param height The initial height of the terminal.
+ * @param colorMode The color depth reported to the application.
  */
 public class TestTerminal(
     private var width: Int = 80,
     private var height: Int = 24,
+    override val colorMode: ColorMode = ColorMode.TrueColor,
 ) : Terminal {
     private val eventQueue = ArrayDeque<Event>()
     private val output = StringBuilder()
@@ -52,6 +60,14 @@ public class TestTerminal(
 
     /** Whether the terminal cursor is currently hidden. */
     public var isCursorHidden: Boolean = false
+        private set
+
+    /** Whether mouse capture has been enabled. */
+    public var isMouseCaptureEnabled: Boolean = false
+        private set
+
+    /** Whether bracketed paste capture has been enabled. */
+    public var isPasteCaptureEnabled: Boolean = false
         private set
 
     /** The current window title. */
@@ -76,7 +92,26 @@ public class TestTerminal(
 
     override fun flush() {}
 
-    override fun moveCursor(x: Int, y: Int) {
+    override fun enableMouseCapture() {
+        isMouseCaptureEnabled = true
+    }
+
+    override fun disableMouseCapture() {
+        isMouseCaptureEnabled = false
+    }
+
+    override fun enablePasteCapture() {
+        isPasteCaptureEnabled = true
+    }
+
+    override fun disablePasteCapture() {
+        isPasteCaptureEnabled = false
+    }
+
+    override fun moveCursor(
+        x: Int,
+        y: Int,
+    ) {
         cursorX = x
         cursorY = y
     }
@@ -122,9 +157,38 @@ public class TestTerminal(
     }
 
     /**
+     * Simulates a mouse interaction at the given 0-indexed cell coordinates.
+     */
+    public fun sendMouse(
+        x: Int,
+        y: Int,
+        kind: MouseKind = MouseKind.Down(MouseButton.Left),
+        modifiers: Set<KeyModifier> = emptySet(),
+    ) {
+        eventQueue.addLast(MouseEvent(x, y, kind, modifiers))
+    }
+
+    /**
+     * Simulates a bracketed paste of [text].
+     */
+    public fun sendPaste(text: String) {
+        eventQueue.addLast(PasteEvent(text))
+    }
+
+    /**
+     * Simulates the terminal window gaining or losing focus.
+     */
+    public fun sendFocus(gained: Boolean) {
+        eventQueue.addLast(FocusEvent(gained))
+    }
+
+    /**
      * Simulates a terminal resize event.
      */
-    public fun resize(width: Int, height: Int) {
+    public fun resize(
+        width: Int,
+        height: Int,
+    ) {
         this.width = width
         this.height = height
     }

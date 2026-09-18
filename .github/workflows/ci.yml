@@ -29,4 +29,37 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run Quality Check
-        run: ./gradlew qualityCheck -Dorg.gradle.welcome=never
+        run: |
+          set -o pipefail
+          ./gradlew qualityCheck -Dorg.gradle.welcome=never 2>&1 | tee build-output.log
+
+      - name: Report failures as annotations
+        if: failure()
+        run: |
+          SECTION=$(awk '/\* What went wrong/,/\* Try/' build-output.log | head -60 | sed ':a;N;$!ba;s/\n/%0A/g')
+          if [ -n "$SECTION" ]; then
+            echo "::error title=Gradle failure detail::${SECTION}"
+          fi
+          ERRORS=$(grep -E "^e: |^w: |error:|\.kt:[0-9]+(:[0-9]+)?:|FAILED|had format violations|Rule.* - " build-output.log | head -80 | sed ':a;N;$!ba;s/\n/%0A/g')
+          if [ -n "$ERRORS" ]; then
+            echo "::error title=Compiler/Lint errors::${ERRORS}"
+          fi
+
+      - name: Dump spotless fixes as annotation
+        if: failure()
+        run: |
+          ./gradlew spotlessApply --continue -Dorg.gradle.welcome=never > spotless-apply.log 2>&1 || true
+          git --no-pager diff --stat || true
+          DIFF=$(git --no-pager diff -U1 | head -250 | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g')
+          if [ -n "$DIFF" ]; then
+            echo "::error title=spotlessApply diff - apply these exact fixes::${DIFF}"
+          else
+            echo "::notice title=spotlessApply::No formatting fixes produced (failure was not spotless-related)"
+          fi
+          XMLS=$(find . -path "*test-results*" -name "*.xml" 2>/dev/null | head -50)
+          if [ -n "$XMLS" ]; then
+            DETAILS=$(grep -h -A3 "<failure" $XMLS 2>/dev/null | head -80 | cut -c1-280 | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g')
+            if [ -n "$DETAILS" ]; then
+              echo "::error title=Test failure messages::${DETAILS}"
+            fi
+          fi

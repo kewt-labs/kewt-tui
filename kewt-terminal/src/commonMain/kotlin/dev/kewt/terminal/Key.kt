@@ -19,8 +19,14 @@ package dev.kewt.terminal
  * Represents a key on the keyboard.
  */
 public sealed class Key {
-    /** A regular character key. */
+    /** A regular character key within the Unicode Basic Multilingual Plane. */
     public data class Char(val c: kotlin.Char) : Key()
+
+    /**
+     * A text input event for code points that do not fit into a single [Char]
+     * (for example emoji and other supplementary-plane characters).
+     */
+    public data class Text(val text: String) : Key()
 
     public data object Enter : Key()
     public data object Escape : Key()

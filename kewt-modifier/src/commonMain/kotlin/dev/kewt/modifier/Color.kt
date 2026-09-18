@@ -26,6 +26,8 @@ public sealed class Color {
 
     /**
      * A TrueColor representation using 8-bit red, green, and blue components.
+     *
+     * Components are clamped into the 0..255 range.
      */
     public data class RGB(val r: Int, val g: Int, val b: Int) : Color() {
         public constructor(hex: Int) : this((hex shr 16) and 0xFF, (hex shr 8) and 0xFF, hex and 0xFF)
@@ -34,14 +36,14 @@ public sealed class Color {
     /**
      * A standard ANSI 16 color.
      *
-     * @property code The color code (0-15).
+     * @property code The color code (0-15). Values are coerced into range.
      */
     public data class Ansi16(val code: Int) : Color()
 
     /**
      * An extended ANSI 256 color.
      *
-     * @property code The color code (0-255).
+     * @property code The color code (0-255). Values are coerced into range.
      */
     public data class Ansi256(val code: Int) : Color()
 
@@ -67,7 +69,44 @@ public sealed class Color {
         public fun rgb(hex: Int): Color = RGB(hex)
 
         /** Creates a [Color.RGB] instance from individual R, G, and B components. */
-        public fun rgb(r: Int, g: Int, b: Int): Color = RGB(r, g, b)
+        public fun rgb(
+            r: Int,
+            g: Int,
+            b: Int,
+        ): Color = RGB(r, g, b)
+
+        /** Creates a [Color.Ansi16] instance, coercing [code] into 0..15. */
+        public fun ansi16(code: Int): Color = Ansi16(code.coerceIn(0, 15))
+
+        /** Creates a [Color.Ansi256] instance, coercing [code] into 0..255. */
+        public fun ansi256(code: Int): Color = Ansi256(code.coerceIn(0, 255))
+
+        /** Creates a grayscale [Color.Ansi256] from the 24-step grayscale ramp (0..23). */
+        public fun gray(step: Int): Color = Ansi256((step.coerceIn(0, 23)) + 232)
+
+        /**
+         * Parses a hex color string such as `#RRGGBB`, `RRGGBB`, `#RGB`, or `RGB`.
+         *
+         * @return The parsed [Color.RGB], or null if the string is not a valid hex color.
+         */
+        public fun fromHex(hex: String): Color? {
+            val value = hex.removePrefix("#")
+            return when (value.length) {
+                3 -> {
+                    val r = value[0].digitToIntOrNull(16) ?: return null
+                    val g = value[1].digitToIntOrNull(16) ?: return null
+                    val b = value[2].digitToIntOrNull(16) ?: return null
+                    RGB(r * 17, g * 17, b * 17)
+                }
+
+                6 -> {
+                    val parsed = value.toIntOrNull(16) ?: return null
+                    RGB(parsed)
+                }
+
+                else -> null
+            }
+        }
 
         /**
          * Packs a Color into a primitive Int for internal storage.
@@ -75,12 +114,15 @@ public sealed class Color {
         public fun pack(color: Color): Int = when (color) {
             Default -> 0
 
-            is Ansi16 -> color.code + 1
+            is Ansi16 -> color.code.coerceIn(0, 15) + 1
 
-            is Ansi256 -> color.code + 17
+            is Ansi256 -> color.code.coerceIn(0, 255) + 17
 
             is RGB -> {
-                val rgb = (color.r shl 16) or (color.g shl 8) or color.b
+                val r = color.r.coerceIn(0, 255)
+                val g = color.g.coerceIn(0, 255)
+                val b = color.b.coerceIn(0, 255)
+                val rgb = (r shl 16) or (g shl 8) or b
                 rgb or (1 shl 31) // Set sign bit to indicate RGB
             }
         }
