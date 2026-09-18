@@ -22,6 +22,7 @@ import dev.kewt.modifier.Style
 import dev.kewt.modifier.TextAlign
 import dev.kewt.modifier.fillMaxSize
 import dev.kewt.modifier.height
+import dev.kewt.modifier.weight
 import dev.kewt.modifier.width
 import dev.kewt.test.assertCellAt
 import dev.kewt.test.assertContainsText
