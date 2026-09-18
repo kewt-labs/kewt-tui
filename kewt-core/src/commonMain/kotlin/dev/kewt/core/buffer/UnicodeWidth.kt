@@ -15,8 +15,6 @@
 * */
 package dev.kewt.core.buffer
 
-import kotlin.text.UnicodeCategory
-
 /**
  * Heuristic Unicode width calculations for terminal rendering.
  *
@@ -40,16 +38,6 @@ public object UnicodeWidth {
         // Wide (double-cell) code points
         if (codePoint in WIDE_RANGES) return 2
 
-        // Combining marks and format characters in the BMP
-        if (codePoint <= 0xFFFF) {
-            val category = codePoint.toChar().category
-            if (category == UnicodeCategory.NON_SPACING_MARK ||
-                category == UnicodeCategory.ENCLOSING_MARK ||
-                category == UnicodeCategory.FORMAT
-            ) {
-                return 0
-            }
-        }
         return 1
     }
 
@@ -124,8 +112,8 @@ public object UnicodeWidth {
         parseRangeTable(
             "00AD,0300-036F,0483-0489,0591-05BD,0610-061A,064B-065F,0670,06D6-06DC," +
                 "0711,0730-074A,07A6-07B0,0900-0903,093A,0951-0957,0E31,0E34-0E3A," +
-                "0EB1,200B-200F,2028-202E,2060-2064,20D0-20F0,FE00-FE0F,FE20-FE2F," +
-                "FEFF,FFF9-FFFB,1F3FB-1F3FF,E0001-E01EF",
+                "0EB1,1AB0-1AFF,1DC0-1DFF,200B-200F,2028-202E,2060-2064,20D0-20F0," +
+                "FE00-FE0F,FE20-FE2F,FEFF,FFF9-FFFB,1F3FB-1F3FF,E0001-E01EF",
         )
 
     /**
