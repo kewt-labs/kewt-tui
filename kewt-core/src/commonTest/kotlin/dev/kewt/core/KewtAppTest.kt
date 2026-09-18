@@ -50,6 +50,18 @@ private class FakeTerminal(
     val events = ArrayDeque<Event>()
     private val output = StringBuilder()
 
+    /** Every non-empty diff frame written since the run started, in order. */
+    val frames = mutableListOf<String>()
+    private var frameStart = 0
+
+    // A minimal virtual screen: applies cursor moves and printable characters from
+    // the diff stream so tests can assert on what a real terminal would display.
+    private val screenW = width
+    private val screenH = height
+    private val screen = CharArray(screenW * screenH) { ' ' }
+    private var cursorX = 0
+    private var cursorY = 0
+
     var isRawMode: Boolean = false
         private set
     var isCursorHidden: Boolean = false
@@ -99,9 +111,47 @@ private class FakeTerminal(
 
     override fun write(text: String) {
         output.append(text)
+        applyToScreen(text)
     }
 
-    override fun flush() {}
+    override fun flush() {
+        if (output.length > frameStart) {
+            frames.add(output.substring(frameStart))
+            frameStart = output.length
+        }
+    }
+
+    private fun applyToScreen(text: String) {
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            if (c == '\u001b' && i + 1 < text.length && text[i + 1] == '[') {
+                var j = i + 2
+                val params = StringBuilder()
+                while (j < text.length && (text[j] in '0'..'9' || text[j] == ';')) {
+                    params.append(text[j])
+                    j++
+                }
+                if (j < text.length) {
+                    if (text[j] == 'H') {
+                        val parts = params.toString().split(';')
+                        cursorY = (parts[0].toIntOrNull() ?: 1) - 1
+                        cursorX = (parts.getOrNull(1)?.toIntOrNull() ?: 1) - 1
+                    }
+                    i = j + 1
+                    continue
+                }
+            }
+            if (cursorY in 0 until screenH && cursorX in 0 until screenW) {
+                screen[cursorY * screenW + cursorX] = c
+            }
+            cursorX++
+            i++
+        }
+    }
+
+    /** Returns the trimmed content of virtual screen row [y]. */
+    fun screenLine(y: Int): String = String(screen, y * screenW, screenW).trimEnd()
 
     override fun moveCursor(
         x: Int,
@@ -118,6 +168,8 @@ private class FakeTerminal(
 
     override fun clear() {
         output.clear()
+        frameStart = 0
+        screen.fill(' ')
     }
 
     override fun clearLine() {}
@@ -163,7 +215,10 @@ class KewtAppTest {
             onKey('q') { exit() }
             view { writeString(0, 0, "Hello Kewt") }
         }
-        assertTrue("Hello Kewt" in terminal.output())
+        // The diff stream is incremental (the space inside the text is skipped because it
+        // matches the default cell), so assert on the virtual screen, not the raw output.
+        assertEquals("Hello Kewt", terminal.screenLine(0))
+        assertTrue(terminal.frames.isNotEmpty())
     }
 
     @Test
@@ -177,7 +232,11 @@ class KewtAppTest {
             onKey('q') { exit() }
             view { writeString(0, 0, "count=$count") }
         }
-        assertTrue("count=1" in terminal.output())
+        // Frame 0 is the initial render; the state change must have produced a second
+        // frame whose delta updates the digit on the virtual screen.
+        assertTrue(terminal.frames.size >= 2, "Expected a re-render frame, got: ${terminal.frames}")
+        assertTrue("count=0" in terminal.frames[0])
+        assertEquals("count=1", terminal.screenLine(0))
     }
 
     @Test
@@ -194,7 +253,9 @@ class KewtAppTest {
             onKey('q') { exit() }
             view { writeString(0, 0, "plain=$plain") }
         }
-        assertTrue("plain=5" in terminal.output())
+        assertTrue(terminal.frames.size >= 2, "Expected a re-render frame, got: ${terminal.frames}")
+        assertTrue("plain=0" in terminal.frames[0])
+        assertEquals("plain=5", terminal.screenLine(0))
     }
 
     @Test

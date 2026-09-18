@@ -56,3 +56,10 @@ jobs:
           else
             echo "::notice title=spotlessApply::No formatting fixes produced (failure was not spotless-related)"
           fi
+          XMLS=$(find . -path "*test-results*" -name "*.xml" 2>/dev/null | head -50)
+          if [ -n "$XMLS" ]; then
+            DETAILS=$(grep -h -A3 "<failure" $XMLS 2>/dev/null | head -80 | cut -c1-280 | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g')
+            if [ -n "$DETAILS" ]; then
+              echo "::error title=Test failure messages::${DETAILS}"
+            fi
+          fi

@@ -61,29 +61,31 @@ class BufferDiffStyleTest {
     fun attributeTurnOffSequences() {
         val current = Buffer(4, 1)
         val previous = Buffer(4, 1)
-        previous.setChar(0, 0, 'a', reverse = true, underline = true)
-        current.setChar(0, 0, 'a')
+        // Within one frame: styled cell followed by a plain cell must turn attributes off
+        current.setChar(0, 0, 'a', reverse = true, underline = true)
+        current.setChar(1, 0, 'b')
         val output = BufferDiff().diff(current, previous)
-        assertTrue(output.contains("\u001b[27m"))
-        assertTrue(output.contains("\u001b[24m"))
+        assertTrue(output.contains("\u001b[27m"), "Expected reverse-off in: $output")
+        assertTrue(output.contains("\u001b[24m"), "Expected underline-off in: $output")
     }
 
     @Test
     fun boldToDimResetsSharedCode() {
         val current = Buffer(2, 1)
         val previous = Buffer(2, 1)
-        previous.setChar(0, 0, 'a', bold = true)
-        current.setChar(0, 0, 'a', dim = true)
+        // Within one frame: bold cell followed by dim cell must pass through the shared reset (22)
+        current.setChar(0, 0, 'a', bold = true)
+        current.setChar(1, 0, 'b', dim = true)
         val output = BufferDiff().diff(current, previous)
         val resetIndex = output.indexOf("\u001b[22m")
         val dimIndex = output.indexOf("\u001b[2m")
-        assertTrue(resetIndex >= 0, "Expected shared reset code 22")
+        assertTrue(resetIndex >= 0, "Expected shared reset code 22 in: $output")
         assertTrue(dimIndex > resetIndex, "Dim must be re-enabled after the shared reset")
     }
 
     @Test
     fun differentSizesDoNotCrash() {
-        val current = Buffer(5, 5)
+        val current = Buffer(6, 6)
         val previous = Buffer(4, 4)
         current.writeString(1, 1, "hello")
         val output = BufferDiff().diff(current, previous)
