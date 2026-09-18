@@ -37,14 +37,29 @@ public enum class ColorMode {
     public companion object {
         /**
          * Detects the color support of the current terminal environment.
+         *
+         * Honors the following environment variables (in order of precedence):
+         * - `NO_COLOR` (see https://no-color.org): disables color when set and non-empty.
+         * - `CLICOLOR_FORCE`: forces TrueColor when set to a value other than "0".
+         * - `COLORTERM`: `truecolor` or `24bit` selects TrueColor.
+         * - `TERM`: `dumb` disables color; `*256color*` selects Extended;
+         *   `*direct*` selects TrueColor; anything else falls back to Extended.
          */
         public fun detect(): ColorMode {
+            val noColor = getEnv("NO_COLOR")
+            if (!noColor.isNullOrEmpty()) return NoColor
+
+            val force = getEnv("CLICOLOR_FORCE")
+            if (!force.isNullOrEmpty() && force != "0") return TrueColor
+
             val colorTerm = getEnv("COLORTERM") ?: ""
             if (colorTerm == "truecolor" || colorTerm == "24bit") return TrueColor
+
             val term = getEnv("TERM") ?: ""
             if (term == "dumb") return NoColor
-            if ("256color" in term) return Extended
-            return TrueColor
+            if (term.contains("direct")) return TrueColor
+            if (term.contains("256color")) return Extended
+            return Extended
         }
     }
 }

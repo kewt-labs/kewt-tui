@@ -24,6 +24,10 @@ import dev.kewt.platform.Size
  * and handling input/output.
  */
 public interface Terminal {
+    /** The color depth this terminal supports, used to downgrade rendered colors. */
+    public val colorMode: ColorMode
+        get() = ColorMode.TrueColor
+
     /** Enters terminal raw mode and initializes state. */
     public fun enterRawMode()
 
@@ -32,6 +36,35 @@ public interface Terminal {
 
     /** Returns the current physical size of the terminal. */
     public fun size(): Size
+
+    /**
+     * Enables mouse tracking so that [MouseEvent]s are reported by [read].
+     *
+     * The default implementation does nothing.
+     */
+    public fun enableMouseCapture() {}
+
+    /**
+     * Disables mouse tracking.
+     *
+     * The default implementation does nothing.
+     */
+    public fun disableMouseCapture() {}
+
+    /**
+     * Enables bracketed paste mode so that pasted text is reported as a [PasteEvent]
+     * instead of a burst of [KeyEvent]s.
+     *
+     * The default implementation does nothing.
+     */
+    public fun enablePasteCapture() {}
+
+    /**
+     * Disables bracketed paste mode.
+     *
+     * The default implementation does nothing.
+     */
+    public fun disablePasteCapture() {}
 
     /**
      * Attempts to read the next input [Event].

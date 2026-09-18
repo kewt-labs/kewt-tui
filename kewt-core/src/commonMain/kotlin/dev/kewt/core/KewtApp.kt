@@ -20,11 +20,15 @@ import dev.kewt.core.buffer.BufferDiff
 import dev.kewt.core.runtime.Scope
 import dev.kewt.core.state.Snapshot
 import dev.kewt.modifier.Color
+import dev.kewt.platform.Size
 import dev.kewt.terminal.AnsiTerminal
 import dev.kewt.terminal.Event
+import dev.kewt.terminal.FocusEvent
 import dev.kewt.terminal.Key
 import dev.kewt.terminal.KeyEvent
 import dev.kewt.terminal.KeyModifier
+import dev.kewt.terminal.MouseEvent
+import dev.kewt.terminal.PasteEvent
 import dev.kewt.terminal.Terminal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -62,12 +66,13 @@ public fun kewt(
  * @property terminal The terminal instance used for IO.
  * @param parentScope The coroutine scope from which the application scope is derived.
  */
+@Suppress("TooManyFunctions")
 public class KewtApp internal constructor(
     private val terminal: Terminal,
     parentScope: CoroutineScope,
 ) {
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
-    private val diff = BufferDiff()
+    private val diff = BufferDiff(terminal.colorMode)
     private var currentBuffer = Buffer(1, 1)
     private var previousBuffer = Buffer(1, 1)
     private var running = true
@@ -75,6 +80,11 @@ public class KewtApp internal constructor(
     private val keyHandlers = mutableMapOf<Char, () -> Unit>()
     private val keyComboHandlers = mutableListOf<KeyCombo>()
     private var keyEventHandler: ((KeyEvent) -> Unit)? = null
+    private var keyInterceptor: ((KeyEvent) -> Boolean)? = null
+    private var mouseHandler: ((MouseEvent) -> Unit)? = null
+    private var pasteHandler: ((String) -> Unit)? = null
+    private var focusHandler: ((Boolean) -> Unit)? = null
+    private var resizeHandler: ((Size) -> Unit)? = null
     private var tabHandler: (() -> Unit)? = null
     private var backTabHandler: (() -> Unit)? = null
     private var viewFn: (Buffer.() -> Unit)? = null
@@ -85,6 +95,12 @@ public class KewtApp internal constructor(
      * Can be used by framework extensions to store persistent state.
      */
     public val attributes: MutableMap<String, Any?> = mutableMapOf()
+
+    /**
+     * The current render surface size in cells.
+     */
+    public val size: Size
+        get() = Size(currentBuffer.width, currentBuffer.height)
 
     private val renderScope =
         object : Scope {
@@ -101,9 +117,9 @@ public class KewtApp internal constructor(
         terminal.hideCursor()
         terminal.clear()
 
-        val size = terminal.size()
-        currentBuffer = Buffer(size.width, size.height)
-        previousBuffer = Buffer(size.width, size.height)
+        val terminalSize = terminal.size()
+        currentBuffer = Buffer(terminalSize.width, terminalSize.height)
+        previousBuffer = Buffer(terminalSize.width, terminalSize.height)
 
         content()
 
@@ -124,12 +140,13 @@ public class KewtApp internal constructor(
      */
     private suspend fun loop() {
         while (running) {
-            val size = terminal.size()
-            if (size.width != currentBuffer.width || size.height != currentBuffer.height) {
-                currentBuffer = Buffer(size.width, size.height)
-                previousBuffer = Buffer(size.width, size.height)
+            val newSize = terminal.size()
+            if (newSize.width != currentBuffer.width || newSize.height != currentBuffer.height) {
+                currentBuffer = Buffer(newSize.width, newSize.height)
+                previousBuffer = Buffer(newSize.width, newSize.height)
                 terminal.clear()
                 needsRender = true
+                resizeHandler?.invoke(newSize)
             }
 
             // Wait for input with a short timeout to allow for other tasks (like 'every' timer)
@@ -152,28 +169,36 @@ public class KewtApp internal constructor(
      */
     private fun dispatchEvent(event: Event) {
         when (event) {
-            is KeyEvent -> {
-                keyComboHandlers.forEach { combo ->
-                    if (combo.key == event.key && combo.modifiers == event.modifiers) {
-                        combo.handler()
-                    }
-                }
+            is KeyEvent -> dispatchKeyEvent(event)
+            is MouseEvent -> mouseHandler?.invoke(event)
+            is PasteEvent -> pasteHandler?.invoke(event.text)
+            is FocusEvent -> focusHandler?.invoke(event.gained)
+        }
+    }
 
-                val key = event.key
-                if (event.modifiers.isEmpty()) {
-                    when (key) {
-                        is Key.Char -> keyHandlers[key.c]?.invoke()
-                        Key.Tab -> (tabHandler ?: keyHandlers['\t'])?.invoke()
-                        Key.BackTab -> backTabHandler?.invoke()
-                        Key.Enter -> keyHandlers['\r']?.invoke()
-                        Key.Backspace -> keyHandlers['\b']?.invoke()
-                        Key.Escape -> keyHandlers['\u001b']?.invoke()
-                        else -> {}
-                    }
-                }
-                keyEventHandler?.invoke(event)
+    private fun dispatchKeyEvent(event: KeyEvent) {
+        val interceptor = keyInterceptor
+        if (interceptor != null && interceptor(event)) return
+
+        keyComboHandlers.forEach { combo ->
+            if (combo.key == event.key && combo.modifiers == event.modifiers) {
+                combo.handler()
             }
         }
+
+        val key = event.key
+        if (event.modifiers.isEmpty()) {
+            when (key) {
+                is Key.Char -> keyHandlers[key.c]?.invoke()
+                Key.Tab -> (tabHandler ?: keyHandlers['\t'])?.invoke()
+                Key.BackTab -> backTabHandler?.invoke()
+                Key.Enter -> keyHandlers['\r']?.invoke()
+                Key.Backspace -> keyHandlers['\b']?.invoke()
+                Key.Escape -> keyHandlers['\u001b']?.invoke()
+                else -> {}
+            }
+        }
+        keyEventHandler?.invoke(event)
     }
 
     /**
@@ -206,23 +231,50 @@ public class KewtApp internal constructor(
         currentBuffer.clear()
         val bg = Color.Blue
         val fg = Color.White
+        val width = currentBuffer.width
+        val height = currentBuffer.height
 
-        for (y in 0 until currentBuffer.height) {
-            for (x in 0 until currentBuffer.width) {
-                currentBuffer.setChar(x, y, ' ', foreground = fg, background = bg)
-            }
-        }
+        currentBuffer.fill(' ', foreground = fg, background = bg)
 
         currentBuffer.writeString(2, 2, "KEWT FRAMEWORK CRASH", foreground = fg, background = bg, bold = true)
-        currentBuffer.writeString(2, 4, "An unhandled exception occurred in the view block:", foreground = fg, background = bg)
-        currentBuffer.writeString(2, 6, e.toString(), foreground = Color.BrightYellow, background = bg, bold = true)
+        currentBuffer.writeString(
+            2,
+            4,
+            "An unhandled exception occurred in the view block:",
+            foreground = fg,
+            background = bg,
+        )
+        currentBuffer.writeString(
+            2,
+            6,
+            e.toString(),
+            foreground = Color.BrightYellow,
+            background = bg,
+            bold = true,
+        )
 
-        val stackTrace = e.stackTraceToString().lines().take(currentBuffer.height - 10)
+        val availableLines = (height - 10).coerceAtLeast(0)
+        val stackTrace = e.stackTraceToString().lines().take(availableLines)
         stackTrace.forEachIndexed { i, line ->
-            currentBuffer.writeString(2, 8 + i, line.take(currentBuffer.width - 4), foreground = fg, background = bg)
+            currentBuffer.writeString(
+                2,
+                8 + i,
+                line.take((width - 4).coerceAtLeast(0)),
+                foreground = fg,
+                background = bg,
+            )
         }
 
-        currentBuffer.writeString(2, currentBuffer.height - 2, "Press any key to exit...", foreground = fg, background = bg, italic = true)
+        if (height >= 2) {
+            currentBuffer.writeString(
+                2,
+                height - 2,
+                "Press any key to exit...",
+                foreground = fg,
+                background = bg,
+                italic = true,
+            )
+        }
 
         onKeyEvent { exit() }
     }
@@ -252,6 +304,15 @@ public class KewtApp internal constructor(
     }
 
     /**
+     * Requests an extra render pass on the next loop iteration.
+     *
+     * Useful after mutating non-reactive data that the view depends on.
+     */
+    public fun invalidate() {
+        needsRender = true
+    }
+
+    /**
      * Schedules a repeated background task.
      *
      * @param interval The delay between executions.
@@ -278,6 +339,27 @@ public class KewtApp internal constructor(
     }
 
     /**
+     * Sets the terminal window title.
+     */
+    public fun setTitle(title: String) {
+        terminal.setTitle(title)
+    }
+
+    /**
+     * Enables mouse tracking so that [onMouse] handlers receive [MouseEvent]s.
+     */
+    public fun enableMouse() {
+        terminal.enableMouseCapture()
+    }
+
+    /**
+     * Enables bracketed paste so that [onPaste] handlers receive pasted text.
+     */
+    public fun enablePaste() {
+        terminal.enablePasteCapture()
+    }
+
+    /**
      * Registers a handler for a simple character key press.
      */
     public fun onKey(
@@ -292,6 +374,45 @@ public class KewtApp internal constructor(
      */
     public fun onKeyEvent(handler: (KeyEvent) -> Unit) {
         keyEventHandler = handler
+    }
+
+    /**
+     * Registers an interceptor invoked before any other key handler.
+     *
+     * Returning true marks the event as consumed: no other key handler will see it.
+     * Only one interceptor can be active; passing null removes it. This is the hook
+     * used by the widget layer to route input to the focused component.
+     */
+    public fun setKeyInterceptor(interceptor: ((KeyEvent) -> Boolean)?) {
+        keyInterceptor = interceptor
+    }
+
+    /**
+     * Registers a handler for mouse events. Requires [enableMouse].
+     */
+    public fun onMouse(handler: (MouseEvent) -> Unit) {
+        mouseHandler = handler
+    }
+
+    /**
+     * Registers a handler for bracketed paste events. Requires [enablePaste].
+     */
+    public fun onPaste(handler: (String) -> Unit) {
+        pasteHandler = handler
+    }
+
+    /**
+     * Registers a handler invoked when the terminal window gains or loses focus.
+     */
+    public fun onFocus(handler: (Boolean) -> Unit) {
+        focusHandler = handler
+    }
+
+    /**
+     * Registers a handler invoked with the new size whenever the terminal is resized.
+     */
+    public fun onResize(handler: (Size) -> Unit) {
+        resizeHandler = handler
     }
 
     /**

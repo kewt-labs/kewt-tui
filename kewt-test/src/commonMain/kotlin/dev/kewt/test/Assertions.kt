@@ -22,6 +22,8 @@ import kotlin.test.assertTrue
 
 /**
  * Captures the characters in the [Buffer] as a literal string representation.
+ *
+ * Trailing whitespace on each line is trimmed.
  */
 public fun Buffer.captureSnapshot(): String {
     val sb = StringBuilder()
@@ -45,6 +47,7 @@ public fun Buffer.assertContainsText(text: String) {
 /**
  * Asserts the state of a specific cell in the buffer.
  */
+@Suppress("LongParameterList")
 public fun Buffer.assertCellAt(
     x: Int,
     y: Int,
@@ -55,6 +58,10 @@ public fun Buffer.assertCellAt(
     italic: Boolean? = null,
     underline: Boolean? = null,
     strikethrough: Boolean? = null,
+    dim: Boolean? = null,
+    blink: Boolean? = null,
+    reverse: Boolean? = null,
+    hidden: Boolean? = null,
 ) {
     val cell = get(x, y)
     val msg = "At ($x, $y):"
@@ -66,4 +73,8 @@ public fun Buffer.assertCellAt(
     if (italic != null) assertEquals(italic, cell.italic, "$msg italic mismatch")
     if (underline != null) assertEquals(underline, cell.underline, "$msg underline mismatch")
     if (strikethrough != null) assertEquals(strikethrough, cell.strikethrough, "$msg strikethrough mismatch")
+    if (dim != null) assertEquals(dim, cell.dim, "$msg dim mismatch")
+    if (blink != null) assertEquals(blink, cell.blink, "$msg blink mismatch")
+    if (reverse != null) assertEquals(reverse, cell.reverse, "$msg reverse mismatch")
+    if (hidden != null) assertEquals(hidden, cell.hidden, "$msg hidden mismatch")
 }

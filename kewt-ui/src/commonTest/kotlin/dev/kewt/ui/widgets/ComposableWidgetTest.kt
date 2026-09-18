@@ -24,6 +24,7 @@ import dev.kewt.modifier.ForegroundModifier
 import dev.kewt.modifier.ItalicModifier
 import dev.kewt.modifier.Modifier
 import dev.kewt.modifier.StrikethroughModifier
+import dev.kewt.modifier.Style
 import dev.kewt.modifier.UnderlineModifier
 import dev.kewt.modifier.background
 import dev.kewt.modifier.bold
@@ -49,7 +50,7 @@ class ComposableWidgetTest {
         val layoutRoot = rootNode.toLayoutNode()
         layoutRoot.measure(Constraints(maxWidth = width, maxHeight = height))
         layoutRoot.place(0, 0)
-        rootNode.paint(buffer, layoutRoot)
+        rootNode.paint(buffer, layoutRoot, Style.Empty)
         return buffer
     }
 

@@ -49,5 +49,6 @@ include(
 
 // Sample Apps
 include(
-    ":examples:counter"
+    ":examples:counter",
+    ":examples:showcase",
 )

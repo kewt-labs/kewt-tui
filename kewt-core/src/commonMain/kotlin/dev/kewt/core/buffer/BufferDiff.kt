@@ -22,6 +22,8 @@ import dev.kewt.terminal.ColorMode
  * Calculates the difference between two [Buffer] instances and generates ANSI escape sequences.
  *
  * This class identifies changed cells and updates styles using additive ANSI sequences.
+ * Wide-character continuation cells are never emitted on their own; they are rendered
+ * as part of their leading cell.
  *
  * @param colorMode The [ColorMode] supported by the target terminal.
  */
@@ -30,9 +32,17 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
 
     /**
      * Generates an ANSI string that transforms the [previous] buffer into the [current] one.
+     *
+     * When the buffers have different dimensions (for example right after a resize),
+     * every cell of [current] that has no counterpart in [previous] is treated as changed.
      */
-    public fun diff(current: Buffer, previous: Buffer): String {
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    public fun diff(
+        current: Buffer,
+        previous: Buffer,
+    ): String {
         out.clear()
+        val sameSize = current.width == previous.width && current.height == previous.height
         var lastX = -1
         var lastY = -1
         var lastFg = 0
@@ -44,8 +54,12 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
             for (x in 0 until current.width) {
                 val i = rowOffset + x
 
+                // Continuation cells are emitted together with their leading cell
+                if ((current.flags[i].toInt() and CellFlag.WIDE_CONTINUATION) != 0) continue
+
                 // Compare primitive data directly
-                if (current.chars[i] == previous.chars[i] &&
+                if (sameSize &&
+                    current.chars[i] == previous.chars[i] &&
                     current.fgColors[i] == previous.fgColors[i] &&
                     current.bgColors[i] == previous.bgColors[i] &&
                     current.flags[i] == previous.flags[i]
@@ -61,17 +75,7 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
                 val currFg = current.fgColors[i]
                 val currBg = current.bgColors[i]
 
-                // Turn off attributes
-                if ((lastFlags and 1) != 0 && (currFlags and 1) == 0) out.append("\u001b[22m")
-                if ((lastFlags and 2) != 0 && (currFlags and 2) == 0) out.append("\u001b[23m")
-                if ((lastFlags and 4) != 0 && (currFlags and 4) == 0) out.append("\u001b[24m")
-                if ((lastFlags and 8) != 0 && (currFlags and 8) == 0) out.append("\u001b[29m")
-
-                // Turn on attributes
-                if ((lastFlags and 1) == 0 && (currFlags and 1) != 0) out.append("\u001b[1m")
-                if ((lastFlags and 2) == 0 && (currFlags and 2) != 0) out.append("\u001b[3m")
-                if ((lastFlags and 4) == 0 && (currFlags and 4) != 0) out.append("\u001b[4m")
-                if ((lastFlags and 8) == 0 && (currFlags and 8) != 0) out.append("\u001b[9m")
+                appendAttributeChanges(lastFlags, currFlags)
 
                 if (currFg != lastFg) {
                     appendForeground(Color.unpack(currFg))
@@ -80,10 +84,45 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
                     appendBackground(Color.unpack(currBg))
                 }
 
-                out.append(current.chars[i])
+                // Detect a double-width cell: either an astral surrogate pair or a
+                // character whose trailing half is flagged as a continuation cell.
+                val nextInRow = x + 1 < current.width
+                val pair = nextInRow &&
+                    current.chars[i].isHighSurrogate() &&
+                    current.chars[i + 1].isLowSurrogate()
+                val wide = nextInRow &&
+                    (current.flags[i + 1].toInt() and CellFlag.WIDE_CONTINUATION) != 0
 
-                lastX = x + 1
-                lastY = y
+                out.append(current.chars[i])
+                if (pair) out.append(current.chars[i + 1])
+
+                when {
+                    pair -> {
+                        val codePoint =
+                            0x10000 +
+                                ((current.chars[i].code - 0xD800) shl 10) +
+                                (current.chars[i + 1].code - 0xDC00)
+                        if (UnicodeWidth.of(codePoint) == 2) {
+                            lastX = x + 2
+                            lastY = y
+                        } else {
+                            // Narrow astral glyph occupying two cells: the terminal cursor
+                            // only advances one column, so force absolute positioning next.
+                            lastX = -1
+                            lastY = -1
+                        }
+                    }
+
+                    wide -> {
+                        lastX = x + 2
+                        lastY = y
+                    }
+
+                    else -> {
+                        lastX = x + 1
+                        lastY = y
+                    }
+                }
                 lastFg = currFg
                 lastBg = currBg
                 lastFlags = currFlags
@@ -92,6 +131,42 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
 
         if (out.isNotEmpty()) out.append("\u001b[0m")
         return out.toString()
+    }
+
+    /**
+     * Emits the SGR sequences required to move from [lastFlags] to [currFlags].
+     *
+     * Bold and dim share the same reset code (22), so they are handled as a group.
+     */
+    private fun appendAttributeChanges(
+        lastFlags: Int,
+        currFlags: Int,
+    ) {
+        val boldDimMask = CellFlag.BOLD or CellFlag.DIM
+        if ((lastFlags and boldDimMask) != (currFlags and boldDimMask)) {
+            if ((lastFlags and boldDimMask) != 0) out.append("\u001b[22m")
+            if ((currFlags and CellFlag.BOLD) != 0) out.append("\u001b[1m")
+            if ((currFlags and CellFlag.DIM) != 0) out.append("\u001b[2m")
+        }
+        appendToggle(lastFlags, currFlags, CellFlag.ITALIC, "\u001b[3m", "\u001b[23m")
+        appendToggle(lastFlags, currFlags, CellFlag.UNDERLINE, "\u001b[4m", "\u001b[24m")
+        appendToggle(lastFlags, currFlags, CellFlag.BLINK, "\u001b[5m", "\u001b[25m")
+        appendToggle(lastFlags, currFlags, CellFlag.REVERSE, "\u001b[7m", "\u001b[27m")
+        appendToggle(lastFlags, currFlags, CellFlag.HIDDEN, "\u001b[8m", "\u001b[28m")
+        appendToggle(lastFlags, currFlags, CellFlag.STRIKETHROUGH, "\u001b[9m", "\u001b[29m")
+    }
+
+    private fun appendToggle(
+        lastFlags: Int,
+        currFlags: Int,
+        mask: Int,
+        on: String,
+        off: String,
+    ) {
+        val wasOn = (lastFlags and mask) != 0
+        val isOn = (currFlags and mask) != 0
+        if (wasOn && !isOn) out.append(off)
+        if (!wasOn && isOn) out.append(on)
     }
 
     private fun appendForeground(color: Color) {
@@ -108,7 +183,7 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
             Color.Default -> out.append("\u001b[49m")
             is Color.Ansi16 -> out.append("\u001b[${if (c.code < 8) 40 + c.code else 100 + c.code - 8}m")
             is Color.Ansi256 -> out.append("\u001b[48;5;${c.code}m")
-            is Color.RGB -> out.append("\u001b[38;2;${c.r};${c.g};${c.b}m")
+            is Color.RGB -> out.append("\u001b[48;2;${c.r};${c.g};${c.b}m")
         }
     }
 
@@ -132,7 +207,11 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
         ColorMode.NoColor -> Color.Default
     }
 
-    private fun rgbToAnsi256(r: Int, g: Int, b: Int): Int {
+    private fun rgbToAnsi256(
+        r: Int,
+        g: Int,
+        b: Int,
+    ): Int {
         if (r == g && g == b) {
             if (r < 8) return 16
             if (r > 248) return 231
@@ -141,7 +220,11 @@ public class BufferDiff(private val colorMode: ColorMode = ColorMode.TrueColor) 
         return 16 + (36 * (r / 51)) + (6 * (g / 51)) + (b / 51)
     }
 
-    private fun rgbToAnsi16(r: Int, g: Int, b: Int): Int {
+    private fun rgbToAnsi16(
+        r: Int,
+        g: Int,
+        b: Int,
+    ): Int {
         val isBright = r > 128 || g > 128 || b > 128
         val threshold = if (isBright) 128 else 0
         val ri = if (r > threshold) 1 else 0

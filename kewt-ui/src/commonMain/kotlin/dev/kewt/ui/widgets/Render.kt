@@ -16,9 +16,15 @@
 package dev.kewt.ui.widgets
 
 import dev.kewt.core.buffer.Buffer
+import dev.kewt.core.buffer.UnicodeWidth
 import dev.kewt.modifier.BorderStyle
 import dev.kewt.modifier.Color
+import dev.kewt.modifier.HorizontalAlignment
 
+/**
+ * Low-level helper that writes styled text into a [Buffer].
+ */
+@Suppress("LongParameterList")
 public fun renderText(
     buffer: Buffer,
     x: Int,
@@ -30,6 +36,10 @@ public fun renderText(
     italic: Boolean = false,
     underline: Boolean = false,
     strikethrough: Boolean = false,
+    dim: Boolean = false,
+    blink: Boolean = false,
+    reverse: Boolean = false,
+    hidden: Boolean = false,
 ) {
     buffer.writeString(
         x = x,
@@ -41,9 +51,20 @@ public fun renderText(
         italic = italic,
         underline = underline,
         strikethrough = strikethrough,
+        dim = dim,
+        blink = blink,
+        reverse = reverse,
+        hidden = hidden,
     )
 }
 
+/**
+ * Low-level helper that draws a border rectangle into a [Buffer].
+ *
+ * When [title] is provided and the border is wide enough, the title is embedded
+ * into the top edge at the position given by [titleAlignment].
+ */
+@Suppress("LongParameterList")
 public fun renderBorder(
     buffer: Buffer,
     x: Int,
@@ -52,7 +73,10 @@ public fun renderBorder(
     height: Int,
     style: BorderStyle,
     color: Color = Color.Default,
+    title: String? = null,
+    titleAlignment: HorizontalAlignment = HorizontalAlignment.Left,
 ) {
+    if (width < 2 || height < 2) return
     buffer.setChar(x, y, style.topLeft, color)
     buffer.setChar(x + width - 1, y, style.topRight, color)
     buffer.setChar(x, y + height - 1, style.bottomLeft, color)
@@ -64,5 +88,19 @@ public fun renderBorder(
     for (cy in (y + 1) until (y + height - 1)) {
         buffer.setChar(x, cy, style.vertical, color)
         buffer.setChar(x + width - 1, cy, style.vertical, color)
+    }
+
+    if (title != null) {
+        val available = width - 2
+        val text = UnicodeWidth.truncate(title, available)
+        val textWidth = UnicodeWidth.displayWidth(text)
+        if (textWidth > 0) {
+            val tx = when (titleAlignment) {
+                HorizontalAlignment.Left -> x + 1
+                HorizontalAlignment.Center -> x + 1 + (available - textWidth) / 2
+                HorizontalAlignment.Right -> x + width - 1 - textWidth
+            }
+            buffer.writeString(tx, y, text, color)
+        }
     }
 }
