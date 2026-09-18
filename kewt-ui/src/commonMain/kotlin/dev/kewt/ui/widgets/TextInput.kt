@@ -79,6 +79,7 @@ public class TextInputState(
                     }
 
                     ctrlOnly -> handleCtrlChar(key.c)
+
                     else -> false
                 }
 

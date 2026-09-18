@@ -215,11 +215,21 @@ class InputParserAdvancedTest {
         val parser = InputParser()
         val bytes =
             byteArrayOf(
-                0x1b, '['.code.toByte(), '2'.code.toByte(), '0'.code.toByte(), '0'.code.toByte(), '~'.code.toByte(),
+                0x1b,
+                '['.code.toByte(),
+                '2'.code.toByte(),
+                '0'.code.toByte(),
+                '0'.code.toByte(),
+                '~'.code.toByte(),
                 'a'.code.toByte(),
                 0x1b,
                 'b'.code.toByte(),
-                0x1b, '['.code.toByte(), '2'.code.toByte(), '0'.code.toByte(), '1'.code.toByte(), '~'.code.toByte(),
+                0x1b,
+                '['.code.toByte(),
+                '2'.code.toByte(),
+                '0'.code.toByte(),
+                '1'.code.toByte(),
+                '~'.code.toByte(),
             )
         parser.feed(bytes, bytes.size)
         assertNull(parser.next()) // enters paste mode

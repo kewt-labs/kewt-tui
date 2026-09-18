@@ -131,11 +131,14 @@ public class InputParser {
     // ---------------------------------------------------------------------
 
     private fun parseUtf8(lead: Int): Event? {
-        val needed = when {
-            lead in 0xC2..0xDF -> 2
-            lead in 0xE0..0xEF -> 3
-            lead in 0xF0..0xF4 -> 4
-            else -> {
+            val needed = when {
+                lead in 0xC2..0xDF -> 2
+
+                lead in 0xE0..0xEF -> 3
+
+                lead in 0xF0..0xF4 -> 4
+
+                else -> {
                 // Invalid lead byte (continuation byte or overlong encoding) - drop it
                 consume()
                 return null
@@ -310,31 +313,57 @@ public class InputParser {
         val code = param.toIntOrNull() ?: return null
         val key = when (code) {
             1, 7 -> Key.Home
+
             2 -> Key.Insert
+
             3 -> Key.Delete
+
             4, 8 -> Key.End
+
             5 -> Key.PageUp
+
             6 -> Key.PageDown
+
             11 -> Key.F(1)
+
             12 -> Key.F(2)
+
             13 -> Key.F(3)
+
             14 -> Key.F(4)
+
             15 -> Key.F(5)
+
             17 -> Key.F(6)
+
             18 -> Key.F(7)
+
             19 -> Key.F(8)
+
             20 -> Key.F(9)
+
             21 -> Key.F(10)
+
             23 -> Key.F(11)
+
             24 -> Key.F(12)
+
             25 -> Key.F(13)
+
             26 -> Key.F(14)
+
             28 -> Key.F(15)
+
             29 -> Key.F(16)
+
             31 -> Key.F(17)
+
             32 -> Key.F(18)
+
             33 -> Key.F(19)
+
             34 -> Key.F(20)
+
 
             200 -> {
                 // Bracketed paste start

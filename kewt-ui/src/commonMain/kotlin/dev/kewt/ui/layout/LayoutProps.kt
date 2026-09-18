@@ -100,9 +100,13 @@ internal fun Modifier.resolveLayoutParams(): LayoutProps {
             }
 
             is WidthModifier -> explicitWidth = element.width
+
             is HeightModifier -> explicitHeight = element.height
+
             is FillMaxWidthModifier -> fillWidth = element.fraction
+
             is FillMaxHeightModifier -> fillHeight = element.fraction
+
             is BorderModifier -> borderThickness = 1
 
             is AlignmentModifier -> {

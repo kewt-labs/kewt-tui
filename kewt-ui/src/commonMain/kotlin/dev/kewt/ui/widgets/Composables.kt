@@ -143,6 +143,7 @@ internal class TextViewNode(
                     }
 
                 TextOverflow.Ellipsis -> lines.add(UnicodeWidth.truncate(raw, maxWidth, ellipsis = true))
+
                 TextOverflow.Clip -> lines.add(UnicodeWidth.truncate(raw, maxWidth))
             }
         }

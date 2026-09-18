@@ -44,3 +44,15 @@ jobs:
           if [ -n "$ERRORS" ]; then
             echo "::error title=Compiler/Lint errors::${ERRORS}"
           fi
+
+      - name: Dump spotless fixes as annotation
+        if: failure()
+        run: |
+          ./gradlew spotlessApply --continue -Dorg.gradle.welcome=never > spotless-apply.log 2>&1 || true
+          git --no-pager diff --stat || true
+          DIFF=$(git --no-pager diff -U1 | head -250 | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g')
+          if [ -n "$DIFF" ]; then
+            echo "::error title=spotlessApply diff - apply these exact fixes::${DIFF}"
+          else
+            echo "::notice title=spotlessApply::No formatting fixes produced (failure was not spotless-related)"
+          fi

@@ -351,9 +351,13 @@ public class LayoutNode(
         var cx = content.x
         when (arrangement) {
             Arrangement.Start -> {}
+
             Arrangement.Center -> cx += free / 2
+
             Arrangement.End -> cx += free
+
             Arrangement.SpaceBetween -> if (children.size > 1) gap = free / (children.size - 1)
+
             Arrangement.SpaceAround -> {
                 gap = free / children.size
                 cx += gap / 2
@@ -389,9 +393,13 @@ public class LayoutNode(
         var cy = content.y
         when (arrangement) {
             Arrangement.Start -> {}
+
             Arrangement.Center -> cy += free / 2
+
             Arrangement.End -> cy += free
+
             Arrangement.SpaceBetween -> if (children.size > 1) gap = free / (children.size - 1)
+
             Arrangement.SpaceAround -> {
                 gap = free / children.size
                 cy += gap / 2
